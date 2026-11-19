@@ -5,30 +5,13 @@ let
   inherit (inputs) xun tapas audioreach;
   kernel = import ../pkgs/kernel.nix { inherit pkgs xun tapas; };
   topology = pkgs.callPackage ../pkgs/firmware.nix { inherit xun audioreach; };
-  firmware =
-    if cfg.firmwareDir == null then
-      pkgs.callPackage ../pkgs/xun-firmware.nix { }
-    else
-      pkgs.runCommand "xun-local-firmware" { passthru.compressFirmware = false; } ''
-        mkdir -p "$out/lib/firmware"
-        cp -rL ${cfg.firmwareDir}/. "$out/lib/firmware/"
-      '';
+  firmware = pkgs.callPackage ../pkgs/xun-firmware.nix { };
   tqftpserv = pkgs.tqftpserv.overrideAttrs (_: {
     postPatch = ''
       substituteInPlace translate.c --replace-fail '/lib/firmware/' '${firmware}/lib/firmware/'
     '';
   });
   dspDir = "qcom/sm6225/xiaomi/xun";
-  adspFiles =
-    if cfg.firmwareDir == null then
-      [ "adsp.mdt" ] ++ map (n: "adsp.b${lib.fixedWidthNumber 2 n}") (
-        lib.remove 11 (lib.range 0 35)
-      )
-    else
-      lib.filter (lib.hasPrefix "adsp.") (
-        builtins.attrNames (builtins.readDir (cfg.firmwareDir + "/${dspDir}"))
-      );
-  dspFirmware = map (name: "${dspDir}/${name}") adspFiles;
   earlyFirmware = [
     "qcom/a630_sqe.fw"
     "qcom/a610_zap.mdt"
@@ -39,7 +22,8 @@ let
     "focaltech_ts_fw_boe_ft8203.bin"
     "qca/crbtfw13.tlv"
     "qca/crnv13.bin"
-  ] ++ dspFirmware;
+    "${dspDir}/adsp.mdt"
+  ] ++ map (n: "${dspDir}/adsp.b${lib.fixedWidthNumber 2 n}") (lib.remove 11 (lib.range 0 35));
   macType = lib.types.strMatching "[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}";
   # Use distinct, locally administered addresses if factory values are unavailable.
   defaultMac = suffix:
@@ -52,11 +36,6 @@ in
 {
   options.hardware.redmi-pad-se = {
     enable = lib.mkEnableOption "hardware support for the 11-inch Redmi Pad SE (xun)";
-    firmwareDir = lib.mkOption {
-      type = lib.types.nullOr lib.types.pathInStore;
-      default = null;
-      description = "Override the firmware extracted from the pinned Xiaomi OTA with a local firmware directory.";
-    };
     wifiMac = lib.mkOption {
       type = macType;
       default = defaultMac "wifi";

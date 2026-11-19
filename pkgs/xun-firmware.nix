@@ -9,12 +9,11 @@
 let
   version = "OS2.0.207.0.VMUEUXM";
   url = "https://cdnorg.d.miui.com/${version}/xun_eea_global-ota_full-${version}-user-15.0-6b1513122d.zip";
-  # ZIP offset of the uncompressed payload.bin.
-  payloadZipOffset = 4707;
   fetchRegion =
     { name, offset, length, hash }:
     let
-      first = payloadZipOffset + offset;
+      # payload.bin starts at byte 4707 in the ZIP.
+      first = 4707 + offset;
       last = first + length - 1;
     in
     fetchurl {
@@ -44,16 +43,10 @@ let
       hash = "sha256-ao1S84VHmMg4dS4W/szsGheYgHTmHxrZOvQRG+Vv8Is=";
     }
     {
-      name = "modem";
+      name = "modem-odm";
       offset = 23967413;
-      length = 12195896;
-      hash = "sha256-kW5G7UWaQT9aj/L8L+ryHMLVKtFdzuTPMKsHwlOgSCo=";
-    }
-    {
-      name = "odm";
-      offset = 36163309;
-      length = 947672;
-      hash = "sha256-pIVszycwQFO5Fyc2MHcMeXVMIvW2VGIr0k/3Mrms2J8=";
+      length = 13143568;
+      hash = "sha256-maPHbUHztlqbQ9rZEFyNbjleCiQtbvh+zCzQMsDtIKI=";
     }
     {
       name = "vendor";

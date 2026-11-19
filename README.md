@@ -37,7 +37,7 @@ The module configures the board kernel, device tree in the boot image, early fir
 
 ## Firmware
 
-The module uses the `xun-firmware` package by default. It extracts the stock
+The module uses the `xun-firmware` package. It extracts the stock
 firmware from Xiaomi's pinned EEA HyperOS `OS2.0.207.0.VMUEUXM` OTA. The
 package fetches about **356 MB** with hash-pinned HTTP ranges for the OTA
 manifest and the `modem`, `bluetooth`, `odm`, and `vendor` partitions.
@@ -50,10 +50,6 @@ The output is under `result/lib/firmware` and contains the modem and ADSP
 images, Wi-Fi board data, Bluetooth firmware, both FT8203 touch firmwares,
 and the stock Adreno firmware. The NixOS module also adds the AudioReach
 topology and standard Linux firmware.
-
-To override the OTA with your own extraction, set
-`hardware.redmi-pad-se.firmwareDir` to a store path containing the files
-in the same layout as `result/lib/firmware`.
 
 ## Provision the example host
 
