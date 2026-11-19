@@ -7,6 +7,7 @@
   erofs-utils,
 }:
 let
+  dspDir = "qcom/sm6225/xiaomi/xun";
   version = "OS2.0.207.0.VMUEUXM";
   url = "https://cdnorg.d.miui.com/${version}/xun_eea_global-ota_full-${version}-user-15.0-6b1513122d.zip";
   fetchRegion =
@@ -93,7 +94,7 @@ stdenvNoCC.mkDerivation {
     runHook preInstall
 
     fw="$out/lib/firmware"
-    radio="$fw/qcom/sm6225/xiaomi/xun"
+    radio="$fw/${dspDir}"
     mkdir -p "$radio" "$fw/qca"
     install -m644 extracted/modem/image/{adsp.*,modem.*,wlanmdsp.mbn,bdwlan*,bd84*} "$radio/"
     install -m644 extracted/vendor/{a610_zap.mdt,a610_zap.b0[0-2],a630_sqe.fw} "$fw/qcom/"
@@ -104,5 +105,19 @@ stdenvNoCC.mkDerivation {
     runHook postInstall
   '';
 
-  passthru.compressFirmware = false;
+  passthru = {
+    compressFirmware = false;
+    initrdFirmwarePaths = [
+      "qcom/a630_sqe.fw"
+      "qcom/a610_zap.mdt"
+      "qcom/a610_zap.b00"
+      "qcom/a610_zap.b01"
+      "qcom/a610_zap.b02"
+      "focaltech_ts_fw_huaxing_ft8203.bin"
+      "focaltech_ts_fw_boe_ft8203.bin"
+      "qca/crbtfw13.tlv"
+      "qca/crnv13.bin"
+      "${dspDir}/adsp.mdt"
+    ] ++ map (n: "${dspDir}/adsp.b${lib.fixedWidthNumber 2 n}") (lib.remove 11 (lib.range 0 35));
+  };
 }

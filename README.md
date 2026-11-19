@@ -1,5 +1,3 @@
-<img src="assets/icon.svg" width="64" height="64" alt="">
-
 # nixun
 
 NixOS hardware support for the Xiaomi Redmi Pad SE 11-inch (`xun`, Snapdragon 680). The module builds the official Linux **7.2.1** stable source with SM6225 and tablet patches from the [upstream xun port](https://github.com/xushengfeng/redmi_pad_se_xun_linux/tree/f25fba528aa352b3706bba363c5b05444e03ebe8). The flake targets `nixos-unstable`. Your host configuration supplies the desktop, audio server, network manager, users, and root filesystem.
@@ -45,11 +43,10 @@ Extraction runs offline and verifies the partition images against the OTA
 manifest.
 [Official Xiaomi archive](https://cdnorg.d.miui.com/OS2.0.207.0.VMUEUXM/xun_eea_global-ota_full-OS2.0.207.0.VMUEUXM-user-15.0-6b1513122d.zip)
 
-Build the stock blobs separately with `nix build 'path:.#xun-firmware'`.
-The output is under `result/lib/firmware` and contains the modem and ADSP
-images, Wi-Fi board data, Bluetooth firmware, both FT8203 touch firmwares,
-and the stock Adreno firmware. The NixOS module also adds the AudioReach
-topology and standard Linux firmware.
+The package includes the modem and ADSP images, Wi-Fi board data,
+Bluetooth firmware, both FT8203 touch firmwares, and the stock Adreno
+firmware. The module also adds the AudioReach topology and standard Linux
+firmware.
 
 ## Provision the example host
 

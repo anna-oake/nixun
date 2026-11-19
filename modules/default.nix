@@ -5,24 +5,7 @@ let
   kernel = import ../pkgs/kernel { inherit pkgs xun tapas; };
   topology = pkgs.callPackage ../pkgs/audioreach-firmware { inherit xun audioreach; };
   firmware = pkgs.callPackage ../pkgs/xun-firmware { };
-  tqftpserv = pkgs.tqftpserv.overrideAttrs (_: {
-    postPatch = ''
-      substituteInPlace translate.c --replace-fail '/lib/firmware/' '${firmware}/lib/firmware/'
-    '';
-  });
   dspDir = "qcom/sm6225/xiaomi/xun";
-  earlyFirmware = [
-    "qcom/a630_sqe.fw"
-    "qcom/a610_zap.mdt"
-    "qcom/a610_zap.b00"
-    "qcom/a610_zap.b01"
-    "qcom/a610_zap.b02"
-    "focaltech_ts_fw_huaxing_ft8203.bin"
-    "focaltech_ts_fw_boe_ft8203.bin"
-    "qca/crbtfw13.tlv"
-    "qca/crnv13.bin"
-    "${dspDir}/adsp.mdt"
-  ] ++ map (n: "${dspDir}/adsp.b${lib.fixedWidthNumber 2 n}") (lib.remove 11 (lib.range 0 35));
   macType = lib.types.strMatching "[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}";
   # Use distinct, locally administered addresses if factory values are unavailable.
   defaultMac = suffix:
@@ -50,10 +33,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [{
-      assertion = pkgs.stdenv.hostPlatform.system == "aarch64-linux";
-      message = "hardware.redmi-pad-se requires aarch64-linux.";
-    }];
     boot = {
       kernelPackages = pkgs.linuxPackagesFor kernel;
       kernelParams = [
@@ -68,8 +47,9 @@ in
       loader.grub.enable = lib.mkDefault false;
       initrd = {
         includeDefaultModules = lib.mkDefault false;
-        extraFirmwarePaths = [ "qcom/sm4250/SM6225-Xun-tplg.bin" ]
-          ++ earlyFirmware;
+        extraFirmwarePaths = firmware.initrdFirmwarePaths ++ [
+          "qcom/sm4250/SM6225-Xun-tplg.bin"
+        ];
       };
     };
 
@@ -94,7 +74,7 @@ in
       xun-tqftpserv = {
         description = "Firmware file service for the Qualcomm modem DSP";
         serviceConfig = {
-          ExecStart = "${tqftpserv}/bin/tqftpserv";
+          ExecStart = "${pkgs.tqftpserv}/bin/tqftpserv";
           Restart = "on-failure";
         };
       };
