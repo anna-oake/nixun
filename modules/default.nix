@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hardware.redmi-pad-se;
-  inherit (pkgs.callPackage ../pkgs/sources { }) xun tapas audioreach;
+  inherit (pkgs.callPackage ../pkgs/sources.nix { }) xun tapas audioreach;
   kernel = import ../pkgs/kernel { inherit pkgs xun tapas; };
   topology = pkgs.callPackage ../pkgs/audioreach-firmware { inherit xun audioreach; };
   firmware = pkgs.callPackage ../pkgs/xun-firmware { };
@@ -79,7 +79,12 @@ in
       bluetooth.enable = lib.mkDefault true;
     };
 
-    environment.sessionVariables.ALSA_CONFIG_UCM2 = pkgs.callPackage ../pkgs/alsa-ucm { inherit xun; };
+    environment.sessionVariables.ALSA_CONFIG_UCM2 =
+      "${pkgs.alsa-ucm-conf.overrideAttrs (old: {
+        postPatch = (old.postPatch or "") + ''
+          cp -r ${xun}/build/ucm2/. ucm2/
+        '';
+      })}/share/alsa/ucm2";
 
     environment.etc."environment.d/70-xun-alsa.conf".text = ''
       ALSA_CONFIG_UCM2=${config.environment.sessionVariables.ALSA_CONFIG_UCM2}
