@@ -1,0 +1,114 @@
+--- a/arch/arm64/boot/dts/qcom/Makefile
++++ b/arch/arm64/boot/dts/qcom/Makefile
+@@ -458,3 +458,4 @@
+ dtb-$(CONFIG_ARCH_QCOM)	+= x1p42100-lenovo-thinkbook-16.dtb x1p42100-lenovo-thinkbook-16-el2.dtb
+ x1p64100-microsoft-denali-el2-dtbs	:= x1p64100-microsoft-denali.dtb x1-el2.dtbo
+ dtb-$(CONFIG_ARCH_QCOM)	+= x1p64100-microsoft-denali.dtb x1p64100-microsoft-denali-el2.dtb
++dtb-$(CONFIG_ARCH_QCOM) += sm6225-xiaomi-xun.dtb
+--- a/drivers/gpu/drm/panel/Kconfig
++++ b/drivers/gpu/drm/panel/Kconfig
+@@ -1375,4 +1375,28 @@
+ 	  Say Y here if you want to enable support for the Xinpeng
+ 	  XPP055C272 controller for 720x1280 LCD panels with MIPI/RGB/SPI
+ 	  system interfaces.
++
++config DRM_PANEL_XIAOMI_M84_35_03_0B
++	tristate "Xiaomi M84 35 03 0b (1200x1920) panel"
++	depends on DRM && DRM_MIPI_DSI
++	depends on BACKLIGHT_CLASS_DEVICE
++	help
++	  Say Y here if you want to enable support for the Xiaomi M84 35 03 0b
++	  panel found in the Redmi Pad SE (xun).
++
++config DRM_PANEL_XIAOMI_M84_36_02_0A
++	tristate "Xiaomi M84 36 02 0a (1200x1920) panel"
++	depends on DRM && DRM_MIPI_DSI
++	depends on BACKLIGHT_CLASS_DEVICE
++	help
++	  Say Y here if you want to enable support for the Xiaomi M84 36 02 0a
++	  panel found in the Redmi Pad SE (xun).
++
++config DRM_PANEL_XIAOMI_M84_42_03_0C
++	tristate "Xiaomi M84 42 03 0c (1200x1920) panel"
++	depends on DRM && DRM_MIPI_DSI
++	depends on BACKLIGHT_CLASS_DEVICE
++	help
++	  Say Y here if you want to enable support for the Xiaomi M84 42 03 0c
++	  panel found in the Redmi Pad SE (xun).
+ endmenu
+--- a/drivers/gpu/drm/panel/Makefile
++++ b/drivers/gpu/drm/panel/Makefile
+@@ -133,3 +133,6 @@
+ obj-$(CONFIG_DRM_PANEL_WIDECHIPS_WS2401) += panel-widechips-ws2401.o
+ obj-$(CONFIG_DRM_PANEL_XIAOMI_K7_38_0C_0B) += panel-xiaomi-k7-38-0c-0b.o
+ obj-$(CONFIG_DRM_PANEL_XINPENG_XPP055C272) += panel-xinpeng-xpp055c272.o
++obj-$(CONFIG_DRM_PANEL_XIAOMI_M84_35_03_0B) += panel-xiaomi-m84-35-03-0b.o
++obj-$(CONFIG_DRM_PANEL_XIAOMI_M84_36_02_0A) += panel-xiaomi-m84-36-02-0a.o
++obj-$(CONFIG_DRM_PANEL_XIAOMI_M84_42_03_0C) += panel-xiaomi-m84-42-03-0c.o
+--- a/drivers/power/supply/Kconfig
++++ b/drivers/power/supply/Kconfig
+@@ -1214,4 +1214,12 @@
+ 	  by the Xiaomi nopmi charger policy driver. Selected
+ 	  automatically, no prompt.
+ 
++
++config SH366101
++	tristate "SinoWealth SH366101 battery fuel gauge"
++	depends on I2C
++	help
++	  Say Y here to enable the SH366101 SBS battery fuel gauge used in the
++	  Redmi Pad SE.
++
+ endif # POWER_SUPPLY
+--- a/drivers/power/supply/Makefile
++++ b/drivers/power/supply/Makefile
+@@ -138,3 +138,4 @@
+ obj-$(CONFIG_PMIC_VOTER)	+= pmic-voter.o
+ obj-y				+= battery_secret/
+ obj-y				+= nopmi/
++obj-$(CONFIG_SH366101)	+= sh366101.o
+--- a/sound/soc/codecs/Kconfig
++++ b/sound/soc/codecs/Kconfig
+@@ -2923,3 +2923,12 @@
+ 	tristate "Qualcomm TX Macro in LPASS(Low Power Audio SubSystem)"
+ 
+ endmenu
++config SND_SOC_FS1815
++	tristate "Foursemi FS1815 speaker amplifier"
++	depends on I2C
++	help
++	  Say Y here to enable the Foursemi FS1815 speaker amplifier of the
++	  Redmi Pad SE. The driver initialises the amplifier from the board
++	  preset and leaves it running behind the WCD937x AUX output.
++
++
+--- a/sound/soc/codecs/Makefile
++++ b/sound/soc/codecs/Makefile
+@@ -892,3 +892,5 @@
+ 
+ # Mux
+ obj-$(CONFIG_SND_SOC_SIMPLE_MUX)	+= snd-soc-simple-mux.o
++snd-soc-fs1815-objs := fs1815.o
++obj-$(CONFIG_SND_SOC_FS1815) += snd-soc-fs1815.o
+--- a/drivers/input/touchscreen/Kconfig
++++ b/drivers/input/touchscreen/Kconfig
+@@ -1416,4 +1416,12 @@
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called himax_hx83112b.
+ 
++
++config TOUCHSCREEN_FT8203
++	tristate "FocalTech FT8203 SPI touchscreen"
++	depends on SPI
++	help
++	  Say Y here if you want to enable support for the FocalTech FT8203
++	  touchscreen controller connected over SPI (Redmi Pad SE).
++
+ endif
+--- a/drivers/input/touchscreen/Makefile
++++ b/drivers/input/touchscreen/Makefile
+@@ -120,3 +120,4 @@
+ obj-$(CONFIG_TOUCHSCREEN_IQS7211)	+= iqs7211.o
+ obj-$(CONFIG_TOUCHSCREEN_ZINITIX)	+= zinitix.o
+ obj-$(CONFIG_TOUCHSCREEN_HIMAX_HX83112B)	+= himax_hx83112b.o
++obj-$(CONFIG_TOUCHSCREEN_FT8203)	+= ft8203-spi.o

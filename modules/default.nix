@@ -1,11 +1,10 @@
-{ inputs }:
 { config, lib, pkgs, ... }:
 let
   cfg = config.hardware.redmi-pad-se;
-  inherit (inputs) xun tapas audioreach;
-  kernel = import ../pkgs/kernel.nix { inherit pkgs xun tapas; };
-  topology = pkgs.callPackage ../pkgs/firmware.nix { inherit xun audioreach; };
-  firmware = pkgs.callPackage ../pkgs/xun-firmware.nix { };
+  inherit (pkgs.callPackage ../pkgs/sources { }) xun tapas audioreach;
+  kernel = import ../pkgs/kernel { inherit pkgs xun tapas; };
+  topology = pkgs.callPackage ../pkgs/audioreach-firmware { inherit xun audioreach; };
+  firmware = pkgs.callPackage ../pkgs/xun-firmware { };
   tqftpserv = pkgs.tqftpserv.overrideAttrs (_: {
     postPatch = ''
       substituteInPlace translate.c --replace-fail '/lib/firmware/' '${firmware}/lib/firmware/'
@@ -80,12 +79,7 @@ in
       bluetooth.enable = lib.mkDefault true;
     };
 
-    environment.sessionVariables.ALSA_CONFIG_UCM2 = pkgs.runCommand "xun-alsa-ucm" { } ''
-      mkdir "$out"
-      cp -r ${pkgs.alsa-ucm-conf}/share/alsa/ucm2/. "$out/"
-      chmod -R u+w "$out"
-      cp -r --remove-destination ${xun}/build/ucm2/. "$out/"
-    '';
+    environment.sessionVariables.ALSA_CONFIG_UCM2 = pkgs.callPackage ../pkgs/alsa-ucm { inherit xun; };
 
     environment.etc."environment.d/70-xun-alsa.conf".text = ''
       ALSA_CONFIG_UCM2=${config.environment.sessionVariables.ALSA_CONFIG_UCM2}
@@ -151,7 +145,7 @@ in
       };
     };
 
-    system.build.xunBootImage = pkgs.callPackage ../pkgs/boot-image.nix {
+    system.build.xunBootImage = pkgs.callPackage ../pkgs/boot-image {
       inherit tapas;
       inherit (cfg) wifiMac bluetoothMac;
       inherit (config.system.build) kernel;
