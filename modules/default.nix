@@ -16,6 +16,8 @@ let
     lib.concatStringsSep ":" ([ "02" ] ++ octets);
 in
 {
+  imports = [ ./boot.nix ];
+
   options.hardware.redmi-pad-se = {
     enable = lib.mkEnableOption "hardware support for the 11-inch Redmi Pad SE (xun)";
     wifiMac = lib.mkOption {
@@ -128,15 +130,6 @@ in
           fi
         '';
       };
-    };
-
-    system.build.xunBootImage = pkgs.callPackage ../pkgs/boot-image {
-      inherit tapas;
-      inherit (cfg) wifiMac bluetoothMac;
-      inherit (config.system.build) kernel;
-      initrd = "${config.system.build.initialRamdisk}/${config.system.boot.loader.initrdFile}";
-      init = "${config.system.build.toplevel}/init";
-      inherit (config.boot) kernelParams;
     };
   };
 }

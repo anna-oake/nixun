@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, lib, modulesPath, pkgs, ... }:
 {
   nixpkgs.hostPlatform = "aarch64-linux";
   networking.hostName = "xun";
@@ -7,6 +7,37 @@
   fileSystems."/" = {
     device = "/dev/disk/by-label/NIXOS_XUN";
     fsType = "ext4";
+    autoResize = true;
+  };
+
+  system.build.xunRootImage = pkgs.callPackage "${modulesPath}/../lib/make-ext4-fs.nix" {
+    inherit pkgs;
+    volumeLabel = "NIXOS_XUN";
+    storePaths = [ config.system.build.toplevel ];
+    populateImageCommands = ''
+      mkdir -p files/etc
+      touch files/etc/NIXOS
+    '';
+  };
+
+  systemd.services.xun-register-store = {
+    description = "Register the initial NixOS store";
+    wantedBy = [ "sysinit.target" ];
+    after = [ "local-fs.target" ];
+    before = [ "sysinit.target" "nix-daemon.socket" "nix-daemon.service" "shutdown.target" ];
+    conflicts = [ "shutdown.target" ];
+    unitConfig = {
+      DefaultDependencies = false;
+      ConditionPathExists = "/nix-path-registration";
+    };
+    restartIfChanged = false;
+    serviceConfig.Type = "oneshot";
+    script = ''
+      set -eu
+      ${lib.getExe' config.nix.package "nix-store"} --load-db < /nix-path-registration
+      ${lib.getExe' config.nix.package "nix-env"} -p /nix/var/nix/profiles/system --set "$(realpath /run/booted-system)"
+      rm /nix-path-registration
+    '';
   };
 
   # Add your key before first boot to log in over the ECM link.

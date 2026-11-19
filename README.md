@@ -48,52 +48,60 @@ Bluetooth firmware, both FT8203 touch firmwares, and the stock Adreno
 firmware. The module also adds the AudioReach topology and standard Linux
 firmware.
 
-## Provision the example host
+## Install to internal storage
 
-[examples/xun.nix](examples/xun.nix) defines a headless host with an ext4 microSD root and a USB Ethernet link for first login. Add your public SSH key before building.
+[The example host](examples/xun.nix) boots from an ext4 filesystem on internal
+`userdata`. It offers USB Ethernet for the initial login. Add your SSH public
+key before building if you want to use that link.
 
-1. Back up the tablet before unlocking. Unlock Xiaomi's bootloader using the procedure for your tablet. Unlocking can erase Android userdata. Keep stock slot A and the matching stock images available for recovery.
-2. On an `aarch64-linux` NixOS machine, build the example system and its boot image from the same configuration. An aarch64 remote builder can also produce the two outputs.
+1. Back up the tablet and keep a matching stock firmware package for recovery.
+   Unlock Xiaomi's bootloader and keep it unlocked. Flashing `userdata` erases
+   Android's data, which is shared across slots.
+2. Build the initial root filesystem and slot A boot image from the same
+   configuration, using an aarch64 Nix builder.
 
    ```sh
-   nix build 'path:.#nixosConfigurations.xun.config.system.build.toplevel' -o result-system
+   nix build 'path:.#nixosConfigurations.xun.config.system.build.xunRootImage' -o result-root
    nix build 'path:.#nixosConfigurations.xun.config.system.build.xunBootImage' -o result-boot
    ```
 
-3. Create a partition on a spare microSD card and verify its path with `lsblk`. The following formats that partition. Replace `/dev/SD_PARTITION` with the actual **microSD partition**, then install the closure with `nixos-install` from a NixOS system with aarch64 execution support.
-
-   ```sh
-   sudo mkfs.ext4 -L NIXOS_XUN /dev/SD_PARTITION
-   sudo mount /dev/SD_PARTITION /mnt
-   sudo nixos-install --root /mnt --system "$(readlink -f result-system)" \
-     --no-bootloader --no-root-passwd
-   sudo umount /mnt
-   ```
-
-4. Insert the card. Enter bootloader fastboot with Power + Volume Down, connect USB, and verify the product and active slot. Try a temporary boot first.
+3. Enter bootloader fastboot with Power + Volume Down. Check that the product
+   is `xun` before flashing. Leave `vendor_boot`, `init_boot`, `dtbo`,
+   `vbmeta`, and the Android bootloader partitions stock.
 
    ```sh
    fastboot getvar product
-   fastboot getvar current-slot
-   fastboot boot result-boot/boot.img
+   fastboot -S 256M flash userdata result-root
+   fastboot flash boot_a result-boot/boot.img
+   fastboot set_active a
+   fastboot reboot
    ```
 
-5. In the example, set the USB Ethernet interface on the host to `172.16.42.2/24` and connect with `ssh root@172.16.42.1`. Verify the root mount, display, touch, radios and reboot before flashing.
+4. On first boot the example expands ext4 to fill `userdata` and registers the
+   Nix store. If you enabled the example's SSH login, set the computer's USB
+   Ethernet interface to `172.16.42.2/24` and connect with
+   `ssh root@172.16.42.1`.
 
-## Bootloader, updates and recovery
+## Deploy and roll back
 
-The image uses Xiaomi's existing Android bootloader and the [tapas v4 shim](https://github.com/Sype0/pmos-tapas/tree/5dee84cc5d7939a1042cf9daf2a21e67ab5c3579). The shim supplies the xun DTB and passes the NixOS initrd to Linux. The output fits within the stock 96 MiB boot partition or fails with a size error. Leave `vendor_boot`, `init_boot`, `dtbo`, `vbmeta`, and the Android bootloader partitions stock. There is no GRUB or systemd-boot menu in this setup.
+Deploy with your usual NixOS system activation, including deploy-rs, and
+reboot to use the new kernel. The external bootloader hook packs the
+generation's kernel, DTB, and initrd into an Android v4 image. It writes and
+verifies the **other** boot partition before selecting it with `qbootctl`.
+The running slot stays untouched. Reboot before scheduling another generation.
 
-After the temporary boot succeeds, verify that slot A is your stock Android slot and that slot B can be overwritten. From bootloader fastboot:
+The image records its slot and generation. After NixOS reaches
+`multi-user.target`, a one-shot service marks the booted slot successful.
+That confirmation has no network or desktop dependency. The module holds
+a Nix GC root for each installed slot, so collecting old system profiles
+does not remove the closures those images boot.
 
-```sh
-fastboot flash boot_b result-boot/boot.img
-fastboot set_active b
-fastboot reboot
-```
+The first deployment populates slot B. Once both slots contain NixOS,
+you can select the previous slot from fastboot with
+`fastboot set_active a` or `fastboot set_active b`, then reboot. Both slots
+share the root filesystem, including writable data. Xiaomi's boot-attempt
+fallback and Linux-side slot switching still need a tablet test. Keep
+fastboot available during bring-up.
 
-After verifying the flashed system boots, run `qbootctl -m` as root on the tablet to mark the current slot successful. The example includes `qbootctl`. Check the slot with `qbootctl` before marking it. To return to Android, enter fastboot, run `fastboot set_active a`, and reboot. Keep the bootloader unlocked while running the custom image.
-
-The boot image embeds the exact NixOS system generation's init path. For updates, build both outputs, install the new closure to the card before flashing its matching boot image, and retain the previous closure and image together for rollback. A normal NixOS activation does not update `boot_b`. For an eMMC install, supply your own suitable root partition in `fileSystems."/".device`. Android's `userdata` is shared across slots, so repurposing it also erases Android's data and can prevent Android from starting.
-
-The NixOS configuration and boot image derivation have been evaluated. Compilation and tablet boot still need testing.
+The NixOS configuration and image derivations have been evaluated.
+Compilation and tablet boot still need testing.
