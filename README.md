@@ -57,7 +57,7 @@ key before building if you want to use that link.
 1. Back up the tablet and keep a matching stock firmware package for recovery.
    Unlock Xiaomi's bootloader and keep it unlocked. Flashing `userdata` erases
    Android's data, which is shared across slots.
-2. Build the initial root filesystem and slot A boot image from the same
+2. Build the initial root filesystem and the U-Boot image from the same
    configuration, using an aarch64 Nix builder.
 
    ```sh
@@ -72,6 +72,8 @@ key before building if you want to use that link.
    ```sh
    fastboot getvar product
    fastboot -S 256M flash userdata result-root
+   fastboot boot result-boot/boot.img
+   # After a successful test boot, return to fastboot and install U-Boot.
    fastboot flash boot_a result-boot/boot.img
    fastboot set_active a
    fastboot reboot
@@ -80,28 +82,26 @@ key before building if you want to use that link.
 4. On first boot the example expands ext4 to fill `userdata` and registers the
    Nix store. If you enabled the example's SSH login, set the computer's USB
    Ethernet interface to `172.16.42.2/24` and connect with
-   `ssh root@172.16.42.1`.
+   `ssh root@172.16.42.1`. After verifying the flashed slot A boots, run
+   `sudo qbootctl -m a` once to confirm the Android boot slot.
 
 ## Deploy and roll back
 
-Deploy with your usual NixOS system activation, including deploy-rs, and
-reboot to use the new kernel. The external bootloader hook packs the
-generation's kernel, DTB, and initrd into an Android v4 image. It writes and
-verifies the **other** boot partition before selecting it with `qbootctl`.
-The running slot stays untouched. Reboot before scheduling another generation.
+Xiaomi's bootloader starts U-Boot through the Android v4 shim. U-Boot loads
+`/boot/extlinux/extlinux.conf` from the internal `userdata` filesystem
+and shows the NixOS generation menu. The stock NixOS extlinux module
+manages the menu and stores the kernel, initrd, and DTB for each entry
+under `/boot/nixos`.
 
-The image records its slot and generation. After NixOS reaches
-`multi-user.target`, a one-shot service marks the booted slot successful.
-That confirmation has no network or desktop dependency. The module holds
-a Nix GC root for each installed slot, so collecting old system profiles
-does not remove the closures those images boot.
+Deploy with deploy-rs or `nixos-rebuild switch` and reboot to load the new
+kernel. To roll back, select an older generation in the boot menu or use
+`nixos-rebuild switch --rollback` and reboot. Kernel updates leave the
+Android boot partition alone. Updates to U-Boot itself still require
+rebuilding and flashing `xunBootImage`.
 
-The first deployment populates slot B. Once both slots contain NixOS,
-you can select the previous slot from fastboot with
-`fastboot set_active a` or `fastboot set_active b`, then reboot. Both slots
-share the root filesystem, including writable data. Xiaomi's boot-attempt
-fallback and Linux-side slot switching still need a tablet test. Keep
-fastboot available during bring-up.
+If migrating from the earlier A/B setup on internal storage, activate this
+configuration first to populate `/boot`. Then test or flash `xunBootImage`
+as above. The existing root filesystem can be reused.
 
-The NixOS configuration and image derivations have been evaluated.
-Compilation and tablet boot still need testing.
+The U-Boot chain and menu input are experimental on `xun`. Keep fastboot
+available and test with `fastboot boot` before flashing U-Boot.

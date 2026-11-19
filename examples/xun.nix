@@ -17,6 +17,8 @@
     populateImageCommands = ''
       mkdir -p files/etc
       touch files/etc/NIXOS
+      ${config.boot.loader.generic-extlinux-compatible.populateCmd} \
+        -g 0 -c ${config.system.build.toplevel} -d ./files/boot
     '';
   };
 
