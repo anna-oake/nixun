@@ -22,7 +22,6 @@ nixun.inputs.nixpkgs.follows = "nixpkgs";
     nixpkgs.hostPlatform = "aarch64-linux";
     hardware.redmi-pad-se = {
       enable = true;
-      firmwareDir = inputs.xun-firmware.outPath;
       # Optional factory addresses in ordinary colon-separated order.
       # wifiMac = "xx:xx:xx:xx:xx:xx";
       # bluetoothMac = "xx:xx:xx:xx:xx:xx";
@@ -32,26 +31,32 @@ nixun.inputs.nixpkgs.follows = "nixpkgs";
 ]
 ```
 
-Declare `inputs.xun-firmware = { url = "path:/absolute/path/to/xun-firmware"; flake = false; };` in the host flake. Use a unique hostname per tablet if you omit the factory addresses, since the module derives locally administered addresses from it.
+Use a unique hostname per tablet if you omit the factory addresses, since the module derives locally administered addresses from it.
 
 The module configures the board kernel, device tree in the boot image, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. The DTS has a fixed 6 GiB memory layout and defaults to USB peripheral mode. Start with the matching 6 GiB model and the upstream-supported FT8203 touch hardware. Other memory layouts, touch variants and USB host mode require board testing.
 
-## Prepare firmware
+## Firmware
 
-Gather these files from the tablet or matching stock images before installing. Use the original filenames unless a rename is shown.
+The module uses the `xun-firmware` package by default. It extracts the stock
+firmware from Xiaomi's pinned EEA HyperOS `OS2.0.207.0.VMUEUXM` OTA. The
+extractor downloads about **356 MB** using HTTP ranges for the OTA manifest
+and the `modem`, `bluetooth`, `odm`, and `vendor` partitions. Nix verifies
+the hash of the extracted firmware directory.
+[Official Xiaomi archive](https://cdnorg.d.miui.com/OS2.0.207.0.VMUEUXM/xun_eea_global-ota_full-OS2.0.207.0.VMUEUXM-user-15.0-6b1513122d.zip)
 
-| Place under the firmware input directory | Source |
-| --- | --- |
-| `qcom/sm6225/xiaomi/xun/{adsp.*,modem.*,wlanmdsp.mbn,bdwlan*,bd84*}` | `image/` in the stock `modem_a` partition or image, mounted read-only |
-| `qcom/a610_zap.{mdt,b00,b01,b02}`, `qcom/a630_sqe.fw` | Stock vendor firmware or [firmware-xiaomi-spes](https://gitlab.nura.eco/sm6225-mainline/firmwares/firmware-xiaomi-spes), under `qcom/sm6225/XIAOMI/SPES/` |
-| `focaltech_ts_fw_boe_ft8203.bin`, `focaltech_ts_fw_huaxing_ft8203.bin` | Stock vendor or ODM firmware |
-| `qca/crbtfw13.tlv`, `qca/crnv13.bin` | `image/cmbtfw13.tlv`, `image/cmnv13.bin` in stock `bluetooth_a`, renamed as shown |
+Build the stock blobs separately with `nix build 'path:.#xun-firmware'`.
+The output is under `result/lib/firmware` and contains the modem and ADSP
+images, Wi-Fi board data, Bluetooth firmware, both FT8203 touch firmwares,
+and the stock Adreno firmware. The NixOS module also adds the AudioReach
+topology and standard Linux firmware.
 
-The module packages the AudioReach topology and standard Linux firmware, including the WCN3990 files. See the [upstream firmware extraction notes](https://github.com/xushengfeng/redmi_pad_se_xun_linux/blob/f25fba528aa352b3706bba363c5b05444e03ebe8/docs/BUILD.md#2-firmware). Keep vendor blobs in a local input outside the source repository.
+To override the OTA with your own extraction, set
+`hardware.redmi-pad-se.firmwareDir` to a store path containing the files
+in the same layout as `result/lib/firmware`.
 
 ## Provision the example host
 
-[examples/xun.nix](examples/xun.nix) defines a headless host with an ext4 microSD root and a USB Ethernet link for first login. Set `firmwareDir` and add your public SSH key before building. To use the example from this checkout with a firmware directory outside it, set `hardware.redmi-pad-se.firmwareDir = builtins.path { path = /absolute/path/to/xun-firmware; };` in the example and add `--impure` to the two build commands below.
+[examples/xun.nix](examples/xun.nix) defines a headless host with an ext4 microSD root and a USB Ethernet link for first login. Add your public SSH key before building.
 
 1. Back up the tablet before unlocking. Unlock Xiaomi's bootloader using the procedure for your tablet. Unlocking can erase Android userdata. Keep stock slot A and the matching stock images available for recovery.
 2. On an `aarch64-linux` NixOS machine, build the example system and its boot image from the same configuration. An aarch64 remote builder can also produce the two outputs.

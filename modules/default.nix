@@ -4,22 +4,31 @@ let
   cfg = config.hardware.redmi-pad-se;
   inherit (inputs) xun tapas audioreach;
   kernel = import ../pkgs/kernel.nix { inherit pkgs xun tapas; };
-  firmware = pkgs.callPackage ../pkgs/firmware.nix {
-    inherit xun audioreach;
-    inherit (cfg) firmwareDir;
-  };
-  hasFirmware = cfg.firmwareDir != null;
+  topology = pkgs.callPackage ../pkgs/firmware.nix { inherit xun audioreach; };
+  firmware =
+    if cfg.firmwareDir == null then
+      pkgs.callPackage ../pkgs/xun-firmware.nix { }
+    else
+      pkgs.runCommand "xun-local-firmware" { passthru.compressFirmware = false; } ''
+        mkdir -p "$out/lib/firmware"
+        cp -rL ${cfg.firmwareDir}/. "$out/lib/firmware/"
+      '';
   tqftpserv = pkgs.tqftpserv.overrideAttrs (_: {
     postPatch = ''
       substituteInPlace translate.c --replace-fail '/lib/firmware/' '${firmware}/lib/firmware/'
     '';
   });
   dspDir = "qcom/sm6225/xiaomi/xun";
-  dspFirmware = lib.optionals hasFirmware (
-    map (name: "${dspDir}/${name}") (
-      lib.filter (lib.hasPrefix "adsp.") (builtins.attrNames (builtins.readDir (cfg.firmwareDir + "/${dspDir}")))
-    )
-  );
+  adspFiles =
+    if cfg.firmwareDir == null then
+      [ "adsp.mdt" ] ++ map (n: "adsp.b${lib.fixedWidthNumber 2 n}") (
+        lib.remove 11 (lib.range 0 35)
+      )
+    else
+      lib.filter (lib.hasPrefix "adsp.") (
+        builtins.attrNames (builtins.readDir (cfg.firmwareDir + "/${dspDir}"))
+      );
+  dspFirmware = map (name: "${dspDir}/${name}") adspFiles;
   earlyFirmware = [
     "qcom/a630_sqe.fw"
     "qcom/a610_zap.mdt"
@@ -46,7 +55,7 @@ in
     firmwareDir = lib.mkOption {
       type = lib.types.nullOr lib.types.pathInStore;
       default = null;
-      description = "Directory containing the extracted xun firmware, laid out as lib/firmware would be.";
+      description = "Override the firmware extracted from the pinned Xiaomi OTA with a local firmware directory.";
     };
     wifiMac = lib.mkOption {
       type = macType;
@@ -67,9 +76,6 @@ in
       assertion = pkgs.stdenv.hostPlatform.system == "aarch64-linux";
       message = "hardware.redmi-pad-se requires aarch64-linux.";
     }];
-    warnings = lib.optional (!hasFirmware)
-      "Redmi Pad SE vendor firmware is unset. Set hardware.redmi-pad-se.firmwareDir for GPU, touch firmware, audio and radios.";
-
     boot = {
       kernelPackages = pkgs.linuxPackagesFor kernel;
       kernelParams = [
@@ -85,12 +91,12 @@ in
       initrd = {
         includeDefaultModules = lib.mkDefault false;
         extraFirmwarePaths = [ "qcom/sm4250/SM6225-Xun-tplg.bin" ]
-          ++ lib.optionals hasFirmware earlyFirmware;
+          ++ earlyFirmware;
       };
     };
 
     hardware = {
-      firmware = [ firmware pkgs.linux-firmware ];
+      firmware = [ firmware topology pkgs.linux-firmware ];
       graphics.enable = lib.mkDefault true;
       bluetooth.enable = lib.mkDefault true;
     };
@@ -106,7 +112,7 @@ in
       ALSA_CONFIG_UCM2=${config.environment.sessionVariables.ALSA_CONFIG_UCM2}
     '';
 
-    systemd.services = lib.mkIf hasFirmware {
+    systemd.services = {
       xun-tqftpserv = {
         description = "Firmware file service for the Qualcomm modem DSP";
         serviceConfig = {

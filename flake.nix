@@ -20,6 +20,11 @@
   outputs =
     { self, nixpkgs, ... }@inputs:
     {
+      packages = nixpkgs.lib.genAttrs [ "aarch64-linux" "x86_64-linux" ] (
+        system: {
+          xun-firmware = nixpkgs.legacyPackages.${system}.callPackage ./pkgs/xun-firmware.nix { };
+        }
+      );
       nixosModules.redmi-pad-se = import ./modules { inherit inputs; };
       nixosConfigurations.xun = nixpkgs.lib.nixosSystem {
         modules = [

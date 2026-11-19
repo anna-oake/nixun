@@ -4,9 +4,6 @@
   networking.hostName = "xun";
   hardware.redmi-pad-se.enable = true;
 
-  # Set this to the directory you prepared before building for the tablet.
-  # hardware.redmi-pad-se.firmwareDir = ./firmware;
-
   fileSystems."/" = {
     device = "/dev/disk/by-label/NIXOS_XUN";
     fsType = "ext4";
