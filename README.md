@@ -39,9 +39,10 @@ The module configures the board kernel, device tree in the boot image, early fir
 
 The module uses the `xun-firmware` package by default. It extracts the stock
 firmware from Xiaomi's pinned EEA HyperOS `OS2.0.207.0.VMUEUXM` OTA. The
-extractor downloads about **356 MB** using HTTP ranges for the OTA manifest
-and the `modem`, `bluetooth`, `odm`, and `vendor` partitions. Nix verifies
-the hash of the extracted firmware directory.
+package fetches about **356 MB** with hash-pinned HTTP ranges for the OTA
+manifest and the `modem`, `bluetooth`, `odm`, and `vendor` partitions.
+Extraction runs offline and verifies the partition images against the OTA
+manifest.
 [Official Xiaomi archive](https://cdnorg.d.miui.com/OS2.0.207.0.VMUEUXM/xun_eea_global-ota_full-OS2.0.207.0.VMUEUXM-user-15.0-6b1513122d.zip)
 
 Build the stock blobs separately with `nix build 'path:.#xun-firmware'`.
