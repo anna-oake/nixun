@@ -1,0 +1,23 @@
+--- a/shim/start.S
++++ b/shim/start.S
+@@ -187,6 +187,20 @@
+ 	mov	x1, x26
+ 	mov	x6, #1
+ 	bl	dcache_op
++	/* Fill the low cells of /chosen/linux,initrd-{start,end}.
++	 * The high cells are already zero and both destinations are below 4 GiB.
++	 */
++	ldr	x9, [x21, #48]
++	ldr	x10, [x21, #56]
++	ldr	x11, [x21, #64]
++	ldr	x12, [x21, #72]
++	add	x9, x27, x9
++	add	x10, x27, x10
++	rev	w9, w9
++	rev	w10, w10
++	str	w9, [x25, x11]
++	str	w10, [x25, x12]
++
+ 	ic	iallu
+ 	dsb	sy
+ 	isb

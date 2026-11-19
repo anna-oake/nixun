@@ -1,0 +1,81 @@
+{
+  "nodes": {
+    "audioreach": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792480050,
+        "narHash": "sha256-J/xqKMa428ScOa/WOvoRopZpo2L70w78XRp8v7JHKRY=",
+        "owner": "linux-msm",
+        "repo": "audioreach-topology",
+        "rev": "d6bb205aca5f4b8fa6b2f44cf8b5f6a081cbf037",
+        "type": "github"
+      },
+      "original": {
+        "owner": "linux-msm",
+        "repo": "audioreach-topology",
+        "rev": "d6bb205aca5f4b8fa6b2f44cf8b5f6a081cbf037",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1794890597,
+        "narHash": "sha256-lME2lHoDHAaSHP3/okgiVoJ0icVEvsQH8LeU3We7tcc=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "04906337b6d53e8bb0eaf0470ae9f070a4d4eb55",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "audioreach": "audioreach",
+        "nixpkgs": "nixpkgs",
+        "tapas": "tapas",
+        "xun": "xun"
+      }
+    },
+    "tapas": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792601090,
+        "narHash": "sha256-d/MS39pr4HxhvgKN7tHzDchsDXUzKzJW8insm2SG19k=",
+        "owner": "Sype0",
+        "repo": "pmos-tapas",
+        "rev": "5dee84cc5d7939a1042cf9daf2a21e67ab5c3579",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Sype0",
+        "repo": "pmos-tapas",
+        "rev": "5dee84cc5d7939a1042cf9daf2a21e67ab5c3579",
+        "type": "github"
+      }
+    },
+    "xun": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793892703,
+        "narHash": "sha256-ksOv5kp6T91M/0/hcormobDWOkXJ6ilLzZUeb0DSq7c=",
+        "owner": "xushengfeng",
+        "repo": "redmi_pad_se_xun_linux",
+        "rev": "f25fba528aa352b3706bba363c5b05444e03ebe8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "xushengfeng",
+        "repo": "redmi_pad_se_xun_linux",
+        "rev": "f25fba528aa352b3706bba363c5b05444e03ebe8",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
