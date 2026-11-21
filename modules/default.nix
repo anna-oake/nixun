@@ -68,54 +68,34 @@ in
         '';
       })}/share/alsa/ucm2";
 
-    environment.etc."environment.d/70-xun-alsa.conf".text = ''
-      ALSA_CONFIG_UCM2=${config.environment.sessionVariables.ALSA_CONFIG_UCM2}
+    services.udev.extraRules = ''
+      SUBSYSTEM=="remoteproc", ATTR{firmware}=="${dspDir}/modem.mdt", TAG+="systemd", ENV{SYSTEMD_WANTS}+="xun-modem@.service"
     '';
 
+    systemd.packages = [ pkgs.tqftpserv ];
     systemd.services = {
-      xun-tqftpserv = {
-        description = "Firmware file service for the Qualcomm modem DSP";
-        serviceConfig = {
-          ExecStart = "${pkgs.tqftpserv}/bin/tqftpserv";
-          Restart = "on-failure";
-        };
-      };
       xun-rmtfs = {
         description = "Read-only EFS service for the Qualcomm modem DSP";
         serviceConfig = {
-          ExecStart = "${pkgs.rmtfs}/bin/rmtfs -r";
+          ExecStart = "${pkgs.rmtfs}/bin/rmtfs -r -P";
           Restart = "on-failure";
         };
       };
-      xun-modem = {
+      "xun-modem@" = {
         description = "Start the Qualcomm modem DSP for Wi-Fi";
-        wantedBy = [ "multi-user.target" ];
-        wants = [ "xun-tqftpserv.service" "xun-rmtfs.service" ];
-        after = [ "xun-tqftpserv.service" "xun-rmtfs.service" ];
+        bindsTo = [ "%i.device" ];
+        scriptArgs = "%f";
+        wants = [ "tqftpserv.service" "xun-rmtfs.service" ];
+        after = [ "%i.device" "tqftpserv.service" "xun-rmtfs.service" ];
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
         };
         script = ''
-          set -eu
           # Give the QRTR services time to register before starting the modem.
           sleep 2
-          modem=
-          for attempt in {1..30}; do
-            for proc in /sys/class/remoteproc/remoteproc*; do
-              [ -r "$proc/firmware" ] || continue
-              [ "$(cat "$proc/firmware")" = "${dspDir}/modem.mdt" ] || continue
-              modem="$proc"
-              break 2
-            done
-            sleep 1
-          done
-          if [ -z "$modem" ]; then
-            echo "xun modem DSP was not found" >&2
-            exit 1
-          fi
-          if [ "$(cat "$modem/state")" = offline ]; then
-            echo start > "$modem/state"
+          if [ "$(cat "$1/state")" = offline ]; then
+            echo start > "$1/state"
           fi
 
           # As in the upstream bring-up, reprobe ath10k after WLAN QMI starts.

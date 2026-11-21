@@ -1,6 +1,6 @@
 { pkgs, xun, tapas }:
 let
-  inherit (pkgs) lib fetchurl;
+  inherit (pkgs) fetchurl;
   version = "7.2.1";
   src = fetchurl {
     url = "mirror://kernel/linux/kernel/v7.x/linux-${version}.tar.xz";
@@ -38,20 +38,5 @@ pkgs.buildLinux {
   defconfig = "xun_defconfig";
   enableCommonConfig = false;
   autoModules = false;
-  structuredExtraConfig = with lib.kernel; {
-    MODULES = yes;
-    BLK_DEV_INITRD = yes;
-    RD_ZSTD = yes;
-    DEVTMPFS = yes;
-    EXT4_FS = yes;
-    MMC_SDHCI_MSM = yes;
-    TOUCHSCREEN_FT8203 = yes;
-    DRM_PANEL_XIAOMI_M84_35_03_0B = yes;
-    DRM_PANEL_XIAOMI_M84_36_02_0A = yes;
-    DRM_PANEL_XIAOMI_M84_42_03_0C = yes;
-    SH366101 = yes;
-    TYPEC_WUSB3801 = yes;
-    SND_SOC_FS1815 = yes;
-  };
   extraMeta.platforms = [ "aarch64-linux" ];
 }
