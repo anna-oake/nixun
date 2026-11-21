@@ -1,0 +1,54 @@
+--- a/common/menu.c
++++ b/common/menu.c
+@@ -183,6 +183,41 @@
+ 	return -ENOENT;
+ }
+ 
++/* Phone buttons provide up, down and enter, but no numeric input. */
++static int menu_button_choice(struct menu *m, void **choice)
++{
++	struct menu_item *item = m->default_item;
++	struct bootmenu_data menu = { .delay = m->timeout ?: -1, .count = 1 };
++	struct cli_ch_state cch;
++	enum bootmenu_key key;
++
++	if (!item)
++		item = list_first_entry(&m->items, struct menu_item, list);
++
++	cli_ch_init(&cch);
++	printf(ANSI_CLEAR_CONSOLE ANSI_CURSOR_POSITION, 1, 1);
++	puts("Volume selects a generation. Power boots it.\n");
++	for (;;) {
++		printf(ANSI_CURSOR_POSITION ANSI_CLEAR_LINE, 3, 1);
++		menu_item_print(m, item, NULL);
++		do {
++			key = menu.delay > 0 ? bootmenu_autoboot_loop(&menu, &cch) :
++					      bootmenu_loop(&menu, &cch);
++		} while (key == BKEY_NONE);
++
++		if (key == BKEY_SELECT) {
++			*choice = item->data;
++			return 1;
++		}
++		if (key == BKEY_QUIT)
++			return -EINTR;
++		if (key == BKEY_UP && item->list.prev != &m->items)
++			item = list_prev_entry(item, list);
++		if (key == BKEY_DOWN && item->list.next != &m->items)
++			item = list_next_entry(item, list);
++	}
++}
++
+ /*
+  * Displays the menu and asks the user to choose an item. *choice will point
+  * to the private data of the item the user chooses. The user makes a choice
+@@ -287,6 +322,9 @@
+ 
+ 	if (!m->prompt)
+ 		return menu_default_choice(m, choice);
++
++	if (IS_ENABLED(CONFIG_BUTTON_REMAP_PHONE_KEYS) && !m->item_choice)
++		return menu_button_choice(m, choice);
+ 
+ 	return menu_interactive_choice(m, choice);
+ }

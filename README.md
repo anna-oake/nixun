@@ -31,7 +31,7 @@ nixun.inputs.nixpkgs.follows = "nixpkgs";
 
 Use a unique hostname per tablet if you omit the factory addresses, since the module derives locally administered addresses from it.
 
-The module configures the board kernel, device tree in the boot image, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. The DTS has a fixed 6 GiB memory layout and defaults to USB peripheral mode. Start with the matching 6 GiB model and the upstream-supported FT8203 touch hardware. Other memory layouts, touch variants and USB host mode require board testing.
+The module configures the board kernel, per-generation device tree, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. The DTS has a fixed 6 GiB memory layout and defaults to USB peripheral mode. Start with the matching 6 GiB model and the upstream-supported FT8203 touch hardware. Other memory layouts, touch variants and USB host mode require board testing.
 
 ## Firmware
 
@@ -50,15 +50,17 @@ firmware.
 
 ## Install to internal storage
 
+This fresh NixOS installation is untested on the tablet.
 [The example host](examples/xun.nix) boots from an ext4 filesystem on internal
 `userdata`. It offers USB Ethernet for the initial login. Add your SSH public
 key before building if you want to use that link.
 
 1. Back up the tablet and keep a matching stock firmware package for recovery.
-   Unlock Xiaomi's bootloader and keep it unlocked. Flashing `userdata` erases
-   Android's data, which is shared across slots.
-2. Build the initial root filesystem and slot A boot image from the same
-   configuration, using an aarch64 Nix builder.
+   Unlocking Xiaomi's bootloader wipes the tablet. Keep it unlocked. Flashing
+   `userdata` replaces its contents with the NixOS root filesystem.
+2. Build the initial root filesystem and the U-Boot image from the same
+   configuration, using an aarch64 Linux builder with KVM. The nixpkgs image
+   builder runs `nixos-install` and installs the extlinux menu in a build VM.
 
    ```sh
    nix build 'path:.#nixosConfigurations.xun.config.system.build.xunRootImage' -o result-root
@@ -71,37 +73,45 @@ key before building if you want to use that link.
 
    ```sh
    fastboot getvar product
-   fastboot -S 256M flash userdata result-root
+   fastboot -S 256M flash userdata result-root/userdata.img
+   fastboot boot result-boot/boot.img
+   ```
+
+4. Verify that NixOS boots from internal storage. The first boot expands ext4
+   to fill `userdata`. For the example's SSH login, set the computer's USB
+   Ethernet interface to `172.16.42.2/24` and run `ssh root@172.16.42.1`.
+   Check `findmnt /` and `readlink -f /run/booted-system` on the tablet.
+
+5. Return to bootloader fastboot with Power + Volume Down. Install the tested
+   image in slot A, then boot it from flash.
+
+   ```sh
    fastboot flash boot_a result-boot/boot.img
    fastboot set_active a
    fastboot reboot
    ```
 
-4. On first boot the example expands ext4 to fill `userdata` and registers the
-   Nix store. If you enabled the example's SSH login, set the computer's USB
-   Ethernet interface to `172.16.42.2/24` and connect with
-   `ssh root@172.16.42.1`.
+   Once NixOS boots from flash, run `sudo qbootctl -m a` on the tablet to
+   mark slot A successful. Xiaomi's bootloader uses this flag to record a successful boot.
 
 ## Deploy and roll back
 
-Deploy with your usual NixOS system activation, including deploy-rs, and
-reboot to use the new kernel. The external bootloader hook packs the
-generation's kernel, DTB, and initrd into an Android v4 image. It writes and
-verifies the **other** boot partition before selecting it with `qbootctl`.
-The running slot stays untouched. Reboot before scheduling another generation.
+Xiaomi's bootloader starts U-Boot through the Android v4 shim. U-Boot loads
+`/boot/extlinux/extlinux.conf` from the internal `userdata` filesystem
+and shows the NixOS generation menu. The stock NixOS extlinux module
+manages the menu and stores the kernel, initrd, and DTB for each entry
+under `/boot/nixos`.
 
-The image records its slot and generation. After NixOS reaches
-`multi-user.target`, a one-shot service marks the booted slot successful.
-That confirmation has no network or desktop dependency. The module holds
-a Nix GC root for each installed slot, so collecting old system profiles
-does not remove the closures those images boot.
+The default entry boots after `boot.loader.timeout` seconds (five by default).
+Press a volume key during the countdown to pause, use the volume keys to
+select a generation, then press Power. The loader reads the entries generated
+by `boot.loader.generic-extlinux-compatible`; its `configurationLimit`
+controls how many generations are available.
 
-The first deployment populates slot B. Once both slots contain NixOS,
-you can select the previous slot from fastboot with
-`fastboot set_active a` or `fastboot set_active b`, then reboot. Both slots
-share the root filesystem, including writable data. Xiaomi's boot-attempt
-fallback and Linux-side slot switching still need a tablet test. Keep
-fastboot available during bring-up.
-
-The NixOS configuration and image derivations have been evaluated.
-Compilation and tablet boot still need testing.
+Deploy with deploy-rs or `nixos-rebuild switch` and reboot to load the new
+kernel. To roll back, select an older generation in the boot menu or use
+`nixos-rebuild switch --rollback` and reboot. Kernel updates leave the
+Android boot partition alone. Updates to U-Boot itself still require
+rebuilding and flashing `xunBootImage`. The SM6225 U-Boot port reserves
+128 MiB each for loading the kernel and initrd; keep each boot file within
+that size when customizing the host.
