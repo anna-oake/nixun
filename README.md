@@ -50,13 +50,14 @@ firmware.
 
 ## Install to internal storage
 
+This fresh NixOS installation is untested on the tablet.
 [The example host](examples/xun.nix) boots from an ext4 filesystem on internal
 `userdata`. It offers USB Ethernet for the initial login. Add your SSH public
 key before building if you want to use that link.
 
 1. Back up the tablet and keep a matching stock firmware package for recovery.
    Unlocking Xiaomi's bootloader wipes the tablet. Keep it unlocked. Flashing
-   `userdata` replaces Android's data on both slots.
+   `userdata` replaces its contents with the NixOS root filesystem.
 2. Build the initial root filesystem and the U-Boot image from the same
    configuration, using an aarch64 Linux builder with KVM. The nixpkgs image
    builder runs `nixos-install` and installs the extlinux menu in a build VM.
@@ -91,7 +92,7 @@ key before building if you want to use that link.
    ```
 
    Once NixOS boots from flash, run `sudo qbootctl -m a` on the tablet to
-   mark slot A successful. The Android slot holds U-Boot across deployments.
+   mark slot A successful. Xiaomi's bootloader uses this flag to record a successful boot.
 
 ## Deploy and roll back
 
@@ -114,12 +115,3 @@ Android boot partition alone. Updates to U-Boot itself still require
 rebuilding and flashing `xunBootImage`. The SM6225 U-Boot port reserves
 128 MiB each for loading the kernel and initrd; keep each boot file within
 that size when customizing the host.
-
-If migrating from the earlier A/B setup on internal storage, activate this
-configuration first to populate `/boot`. Skip the `userdata` flash and start
-with `fastboot boot result-boot/boot.img`. Verify that the existing system boots
-through U-Boot before installing it in slot A. Once you have retired the A/B
-loader, its `/nix/var/nix/gcroots/xun-slot-{a,b}` links can be removed.
-
-The U-Boot chain and menu input are experimental on `xun`. Keep fastboot
-available and test with `fastboot boot` before flashing U-Boot.
