@@ -23,6 +23,8 @@ runCommand "xun-uboot-android-image" {
   chmod u+w xun.dtb
   mmc=$(fdtget -t s xun.dtb /__symbols__ sdhc_1)
   fdtput -t s xun.dtb /aliases mmc0 "$mmc"
+  fb=$(fdtget -t s xun.dtb /__symbols__ framebuffer0)
+  fdtput -t i xun.dtb "$fb" rot 2
 
   clang --target=aarch64-linux-gnu -c ${tapas}/shim/start.S -o shim.o
   ld.lld -T ${tapas}/shim/shim.ld shim.o -o shim.elf

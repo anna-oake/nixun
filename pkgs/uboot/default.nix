@@ -1,4 +1,4 @@
-{ buildUBoot, fetchurl }:
+{ buildUBoot, fetchurl, xxd }:
 
 let
   rev = "ff2cef41fcdc60ff8c91820e6da5da39fc933e7e";
@@ -9,24 +9,22 @@ in
     url = "https://gitlab.nura.eco/sm6225-mainline/u-boot/-/archive/${rev}/u-boot-${rev}.tar.gz";
     hash = "sha256-jv7Su1odkcVa2aM1XtdUnQmW5Sz/1Pur7lJ76DHXbpI=";
   };
-  # The xun control DTB comes from the Android boot image.
+
+  # The shim supplies the xun control DTB at entry.
   defconfig = "xiaomi_spes_defconfig";
+  buildFlags = [ "u-boot-nodtb.bin" ];
   filesToInstall = [ "u-boot-nodtb.bin" ];
+  extraPatches = [ ./extlinux-buttons.patch ];
   extraConfig = ''
     CONFIG_CMD_SYSBOOT=y
+    CONFIG_SYS_CBSIZE=2048
+    CONFIG_BOOTDELAY=-2
+    # CONFIG_AUTOBOOT_MENU_SHOW is not set
+    # CONFIG_BOOT_RETRY is not set
     # CONFIG_ENV_IS_IN_FAT is not set
     CONFIG_ENV_IS_NOWHERE=y
+    CONFIG_ENV_DEFAULT_ENV_TEXT_FILE="${./xun.env}"
   '';
 }).overrideAttrs (old: {
-  buildFlags = [ "u-boot-nodtb.bin" ];
-  postPatch = old.postPatch + ''
-    substituteInPlace board/qualcomm/qcom-phone.env \
-      --replace-fail 'preboot=scsi scan' 'preboot=' \
-      --replace-fail 'bootcmd=run menucmd' 'bootcmd=run boot_nixos; run menucmd' \
-      --replace-fail 'bootmenu_0=Boot=bootefi bootmgr; pause' 'bootmenu_0=Boot NixOS=run boot_nixos; pause' \
-      --replace-fail 'button_cmd_0_name=Volume Down' 'button_cmd_0_name=Volume Up'
-    cat >> board/qualcomm/qcom-phone.env <<'ENV'
-boot_nixos=if mmc dev 0 && part number mmc 0 userdata rootpart; then sysboot mmc 0:$rootpart ext2 $scriptaddr /boot/extlinux/extlinux.conf; fi
-ENV
-  '';
+  nativeBuildInputs = old.nativeBuildInputs ++ [ xxd ];
 })

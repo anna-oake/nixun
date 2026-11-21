@@ -11,7 +11,6 @@ in
 {
   config = lib.mkIf cfg.enable {
     boot.loader.generic-extlinux-compatible.enable = true;
-    boot.loader.timeout = lib.mkDefault 5;
 
     hardware.deviceTree = {
       enable = true;
@@ -41,7 +40,7 @@ in
     system.build.xunBootImage = pkgs.callPackage ../pkgs/boot-image {
       inherit tapas;
       uboot = pkgs.callPackage ../pkgs/uboot { };
-      deviceTree = "${dt.package}/${dt.name}";
+      deviceTree = "${dt.dtbSource}/${dt.name}";
     };
   };
 }

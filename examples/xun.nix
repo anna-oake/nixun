@@ -1,4 +1,4 @@
-{ config, lib, modulesPath, pkgs, ... }:
+{ config, modulesPath, pkgs, ... }:
 {
   nixpkgs.hostPlatform = "aarch64-linux";
   networking.hostName = "xun";
@@ -10,36 +10,12 @@
     autoResize = true;
   };
 
-  system.build.xunRootImage = pkgs.callPackage "${modulesPath}/../lib/make-ext4-fs.nix" {
-    inherit pkgs;
-    volumeLabel = "NIXOS_XUN";
-    storePaths = [ config.system.build.toplevel ];
-    populateImageCommands = ''
-      mkdir -p files/etc
-      touch files/etc/NIXOS
-      ${config.boot.loader.generic-extlinux-compatible.populateCmd} \
-        -g 0 -c ${config.system.build.toplevel} -d ./files/boot
-    '';
-  };
-
-  systemd.services.xun-register-store = {
-    description = "Register the initial NixOS store";
-    wantedBy = [ "sysinit.target" ];
-    after = [ "local-fs.target" ];
-    before = [ "sysinit.target" "nix-daemon.socket" "nix-daemon.service" "shutdown.target" ];
-    conflicts = [ "shutdown.target" ];
-    unitConfig = {
-      DefaultDependencies = false;
-      ConditionPathExists = "/nix-path-registration";
-    };
-    restartIfChanged = false;
-    serviceConfig.Type = "oneshot";
-    script = ''
-      set -eu
-      ${lib.getExe' config.nix.package "nix-store"} --load-db < /nix-path-registration
-      ${lib.getExe' config.nix.package "nix-env"} -p /nix/var/nix/profiles/system --set "$(realpath /run/booted-system)"
-      rm /nix-path-registration
-    '';
+  system.build.xunRootImage = pkgs.callPackage "${modulesPath}/../lib/make-disk-image.nix" {
+    inherit config pkgs;
+    partitionTableType = "none";
+    label = "NIXOS_XUN";
+    baseName = "userdata";
+    copyChannel = false;
   };
 
   # Add your key before first boot to log in over the ECM link.
@@ -51,38 +27,7 @@
 
   # Optional provisioning link. The host side uses 172.16.42.2/24.
   networking.interfaces.usb0.ipv4.addresses = [{ address = "172.16.42.1"; prefixLength = 24; }];
-  systemd.services.xun-usb-network = {
-    description = "USB Ethernet for provisioning";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "sys-kernel-config.mount" ];
-    requires = [ "sys-kernel-config.mount" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = ''
-      gadget=/sys/kernel/config/usb_gadget/nixos
-      mkdir -p "$gadget"
-      cd "$gadget"
-      echo 0x1d6b > idVendor
-      echo 0x0104 > idProduct
-      mkdir -p functions/ecm.usb0 configs/c.1
-      ln -s functions/ecm.usb0 configs/c.1/
-      for udc in /sys/class/udc/*; do
-        test -e "$udc" || exit 1
-        basename "$udc" > UDC
-        break
-      done
-    '';
-    preStop = "echo '' > /sys/kernel/config/usb_gadget/nixos/UDC";
-    postStop = ''
-      cd /sys/kernel/config/usb_gadget/nixos
-      rm -f configs/c.1/ecm.usb0
-      rmdir configs/c.1 functions/ecm.usb0
-      cd ..
-      rmdir nixos
-    '';
-  };
+  boot.kernelModules = [ "g_ether" ];
 
   environment.systemPackages = [ pkgs.qbootctl ];
   system.stateVersion = "26.05";

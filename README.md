@@ -31,7 +31,7 @@ nixun.inputs.nixpkgs.follows = "nixpkgs";
 
 Use a unique hostname per tablet if you omit the factory addresses, since the module derives locally administered addresses from it.
 
-The module configures the board kernel, device tree in the boot image, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. The DTS has a fixed 6 GiB memory layout and defaults to USB peripheral mode. Start with the matching 6 GiB model and the upstream-supported FT8203 touch hardware. Other memory layouts, touch variants and USB host mode require board testing.
+The module configures the board kernel, per-generation device tree, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. The DTS has a fixed 6 GiB memory layout and defaults to USB peripheral mode. Start with the matching 6 GiB model and the upstream-supported FT8203 touch hardware. Other memory layouts, touch variants and USB host mode require board testing.
 
 ## Firmware
 
@@ -55,10 +55,11 @@ firmware.
 key before building if you want to use that link.
 
 1. Back up the tablet and keep a matching stock firmware package for recovery.
-   Unlock Xiaomi's bootloader and keep it unlocked. Flashing `userdata` erases
-   Android's data, which is shared across slots.
+   Unlocking Xiaomi's bootloader wipes the tablet. Keep it unlocked. Flashing
+   `userdata` replaces Android's data on both slots.
 2. Build the initial root filesystem and the U-Boot image from the same
-   configuration, using an aarch64 Nix builder.
+   configuration, using an aarch64 Linux builder with KVM. The nixpkgs image
+   builder runs `nixos-install` and installs the extlinux menu in a build VM.
 
    ```sh
    nix build 'path:.#nixosConfigurations.xun.config.system.build.xunRootImage' -o result-root
@@ -71,19 +72,26 @@ key before building if you want to use that link.
 
    ```sh
    fastboot getvar product
-   fastboot -S 256M flash userdata result-root
+   fastboot -S 256M flash userdata result-root/userdata.img
    fastboot boot result-boot/boot.img
-   # After a successful test boot, return to fastboot and install U-Boot.
+   ```
+
+4. Verify that NixOS boots from internal storage. The first boot expands ext4
+   to fill `userdata`. For the example's SSH login, set the computer's USB
+   Ethernet interface to `172.16.42.2/24` and run `ssh root@172.16.42.1`.
+   Check `findmnt /` and `readlink -f /run/booted-system` on the tablet.
+
+5. Return to bootloader fastboot with Power + Volume Down. Install the tested
+   image in slot A, then boot it from flash.
+
+   ```sh
    fastboot flash boot_a result-boot/boot.img
    fastboot set_active a
    fastboot reboot
    ```
 
-4. On first boot the example expands ext4 to fill `userdata` and registers the
-   Nix store. If you enabled the example's SSH login, set the computer's USB
-   Ethernet interface to `172.16.42.2/24` and connect with
-   `ssh root@172.16.42.1`. After verifying the flashed slot A boots, run
-   `sudo qbootctl -m a` once to confirm the Android boot slot.
+   Once NixOS boots from flash, run `sudo qbootctl -m a` on the tablet to
+   mark slot A successful. The Android slot holds U-Boot across deployments.
 
 ## Deploy and roll back
 
@@ -93,15 +101,25 @@ and shows the NixOS generation menu. The stock NixOS extlinux module
 manages the menu and stores the kernel, initrd, and DTB for each entry
 under `/boot/nixos`.
 
+The default entry boots after `boot.loader.timeout` seconds (five by default).
+Press a volume key during the countdown to pause, use the volume keys to
+select a generation, then press Power. The loader reads the entries generated
+by `boot.loader.generic-extlinux-compatible`; its `configurationLimit`
+controls how many generations are available.
+
 Deploy with deploy-rs or `nixos-rebuild switch` and reboot to load the new
 kernel. To roll back, select an older generation in the boot menu or use
 `nixos-rebuild switch --rollback` and reboot. Kernel updates leave the
 Android boot partition alone. Updates to U-Boot itself still require
-rebuilding and flashing `xunBootImage`.
+rebuilding and flashing `xunBootImage`. The SM6225 U-Boot port reserves
+128 MiB each for loading the kernel and initrd; keep each boot file within
+that size when customizing the host.
 
 If migrating from the earlier A/B setup on internal storage, activate this
-configuration first to populate `/boot`. Then test or flash `xunBootImage`
-as above. The existing root filesystem can be reused.
+configuration first to populate `/boot`. Skip the `userdata` flash and start
+with `fastboot boot result-boot/boot.img`. Verify that the existing system boots
+through U-Boot before installing it in slot A. Once you have retired the A/B
+loader, its `/nix/var/nix/gcroots/xun-slot-{a,b}` links can be removed.
 
 The U-Boot chain and menu input are experimental on `xun`. Keep fastboot
 available and test with `fastboot boot` before flashing U-Boot.
