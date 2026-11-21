@@ -45,8 +45,9 @@ manifest.
 
 The package includes the modem and ADSP images, Wi-Fi board data,
 Bluetooth firmware, both FT8203 touch firmwares, and the stock Adreno
-firmware. The module also adds the AudioReach topology and standard Linux
-firmware.
+firmware. The WCN3990 Wi-Fi driver also uses `board-2.bin` and `firmware-5.bin`
+from Linux firmware. The package fetches just those files and their notices.
+The module adds the AudioReach topology and the wireless regulatory database.
 
 ## Install to internal storage
 

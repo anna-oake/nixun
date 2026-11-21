@@ -1,4 +1,4 @@
-{ fetchFromGitHub }:
+{ fetchFromGitHub, fetchFromGitLab }:
 
 {
   xun = fetchFromGitHub {
@@ -13,6 +13,20 @@
     repo = "pmos-tapas";
     rev = "5dee84cc5d7939a1042cf9daf2a21e67ab5c3579";
     hash = "sha256-d/MS39pr4HxhvgKN7tHzDchsDXUzKzJW8insm2SG19k=";
+  };
+
+  ath10k = fetchFromGitLab {
+    owner = "kernel-firmware";
+    repo = "linux-firmware";
+    tag = "20261019";
+    sparseCheckout = [
+      "/ath10k/WCN3990/hw1.0/board-2.bin"
+      "/ath10k/WCN3990/hw1.0/firmware-5.bin"
+      "/ath10k/WCN3990/hw1.0/notice.txt_wlanmdsp"
+      "/LICENSES/LICENSE.QualcommAtheros_ath10k"
+    ];
+    nonConeMode = true;
+    hash = "sha256-iaL+r9Qz+q/CaTgxnWTAL279XhQmONEvMr4R8KWi+6c=";
   };
 
   audioreach = fetchFromGitHub {

@@ -10,8 +10,10 @@ runCommand "xun-board-files.patch" { } ''
     diff -u --label /dev/null --label "b/$2" /dev/null "$1" || test "$?" -eq 1
   }
 
-  tar -xOf ${src} linux-7.2.1/scripts/kconfig/merge_config.sh > merge_config.sh
-  sh merge_config.sh -m ${tapas}/config/base.config ${tapas}/config/tapas.config     ${xun}/build/config/xun.config ${./nixos.config}
+  tar -xOf ${src} --wildcards 'linux-*/scripts/kconfig/merge_config.sh' > merge_config.sh
+  sh merge_config.sh -m \
+    ${tapas}/config/base.config ${tapas}/config/tapas.config \
+    ${xun}/build/config/xun.config ${./nixos.config}
 
   {
     add_file .config arch/arm64/configs/xun_defconfig

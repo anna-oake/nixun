@@ -2,6 +2,7 @@
   lib,
   stdenvNoCC,
   fetchurl,
+  ath10k,
   payload-dumper-go,
   mtools,
   erofs-utils,
@@ -96,6 +97,9 @@ stdenvNoCC.mkDerivation {
     fw="$out/lib/firmware"
     radio="$fw/${dspDir}"
     mkdir -p "$radio" "$fw/qca"
+    cp -r ${ath10k}/ath10k "$fw/"
+    install -Dm644 ${ath10k}/LICENSES/LICENSE.QualcommAtheros_ath10k \
+      "$out/share/licenses/xun-firmware/LICENSE.QualcommAtheros_ath10k"
     install -m644 extracted/modem/image/{adsp.*,modem.*,wlanmdsp.mbn,bdwlan*,bd84*} "$radio/"
     install -m644 extracted/vendor/{a610_zap.mdt,a610_zap.b0[0-2],a630_sqe.fw} "$fw/qcom/"
     install -m644 extracted/odm/focaltech_ts_fw_{boe,huaxing}_ft8203.bin "$fw/"
