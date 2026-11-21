@@ -1,10 +1,10 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.hardware.redmi-pad-se;
-  inherit (pkgs.callPackage ../pkgs/sources.nix { }) xun tapas audioreach;
+  inherit (pkgs.callPackage ../pkgs/sources.nix { }) xun tapas audioreach ath10k;
   kernel = import ../pkgs/kernel { inherit pkgs xun tapas; };
   topology = pkgs.callPackage ../pkgs/audioreach-firmware { inherit xun audioreach; };
-  firmware = pkgs.callPackage ../pkgs/xun-firmware { };
+  firmware = pkgs.callPackage ../pkgs/xun-firmware { inherit ath10k; };
   dspDir = "qcom/sm6225/xiaomi/xun";
   macType = lib.types.strMatching "[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}";
   # Use distinct, locally administered addresses if factory values are unavailable.
@@ -56,7 +56,8 @@ in
     };
 
     hardware = {
-      firmware = [ firmware topology pkgs.linux-firmware ];
+      firmware = [ firmware topology ];
+      wirelessRegulatoryDatabase = lib.mkDefault true;
       graphics.enable = lib.mkDefault true;
       bluetooth.enable = lib.mkDefault true;
     };
