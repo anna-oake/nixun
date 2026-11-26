@@ -34,6 +34,10 @@ pkgs.buildLinux {
       patch = pkgs.callPackage ./board-files.patch.nix { inherit src xun tapas; };
     }
     {
+      name = "xun-m84-36-backlight";
+      patch = ./panel-m84-36-backlight.patch;
+    }
+    {
       name = "xun-board-integration";
       patch = ./board-integration.patch;
     }

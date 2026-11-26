@@ -33,6 +33,14 @@ Use a unique hostname per tablet if you omit the factory addresses, since the mo
 
 The module configures the board kernel, per-generation device tree, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. It defaults to USB peripheral mode and supports FT8203 touch hardware.
 
+Nixun enables native display modesetting by default. Set
+`hardware.redmi-pad-se.panelVariant` to select the installed panel if it
+differs from the board device tree's M84 35 03 0B default. The option accepts
+`m84-35-03-0b`, `m84-36-02-0a`, and `m84-42-03-0c`. Set
+`hardware.redmi-pad-se.useFirmwareFramebuffer = true` for a recovery console
+if native modesetting gives corrupt or blank output. This mode keeps the
+firmware display setup and rotates the text console 180°.
+
 ## Firmware
 
 The module uses the `xun-firmware` package. It extracts the stock

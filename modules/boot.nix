@@ -17,13 +17,55 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    boot.loader.generic-extlinux-compatible.enable = true;
+    boot = {
+      loader.generic-extlinux-compatible.enable = true;
+      kernelParams =
+        if cfg.useFirmwareFramebuffer then
+          [
+            "regulator_ignore_unused"
+            "fbcon=rotate:2"
+          ]
+        else
+          [ "video=DSI-1:panel_orientation=upside_down" ];
+    };
 
     hardware.deviceTree = {
       enable = true;
       name = "qcom/sm6225-xiaomi-xun.dtb";
       filter = "sm6225-xiaomi-xun.dtb";
-      overlays = [
+      overlays = (lib.optional cfg.useFirmwareFramebuffer {
+        name = "xun-firmware-display";
+        dtsText = ''
+          /dts-v1/;
+          /plugin/;
+
+          / {
+            compatible = "xiaomi,xun";
+          };
+
+          &mdss {
+            status = "disabled";
+          };
+
+          &dispcc {
+            status = "disabled";
+          };
+        '';
+      }) ++ (lib.optional (cfg.panelVariant != null) {
+        name = "xun-panel-variant";
+        dtsText = ''
+          /dts-v1/;
+          /plugin/;
+
+          / {
+            compatible = "xiaomi,xun";
+          };
+
+          &panel {
+            compatible = "xiaomi,${cfg.panelVariant}";
+          };
+        '';
+      }) ++ [
         {
           name = "xun-radio-addresses";
           dtsText = ''
