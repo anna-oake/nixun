@@ -14,7 +14,10 @@ in
   defconfig = "xiaomi_spes_defconfig";
   buildFlags = [ "u-boot-nodtb.bin" ];
   filesToInstall = [ "u-boot-nodtb.bin" ];
-  extraPatches = [ ./extlinux-buttons.patch ];
+  extraPatches = [
+    ./extlinux-buttons.patch
+    ./xun-abl-memory.patch
+  ];
   extraConfig = ''
     CONFIG_CMD_SYSBOOT=y
     CONFIG_SYS_CBSIZE=2048

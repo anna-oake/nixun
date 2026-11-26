@@ -29,7 +29,8 @@ runCommand "xun-uboot-android-image" {
   fb=$(fdtget -t s xun.dtb /__symbols__ framebuffer0)
   fdtput -t i xun.dtb "$fb" rot 2
 
-  clang --target=aarch64-linux-gnu -c ${tapas}/shim/start.S -o shim.o
+  patch -o shim.S ${tapas}/shim/start.S < ${./keep-abl-fdt.patch}
+  clang --target=aarch64-linux-gnu -c shim.S -o shim.o
   ld.lld -T ${tapas}/shim/shim.ld shim.o -o shim.elf
   llvm-objcopy -O binary shim.elf shim.bin
   python3 ${tapas}/scripts/pack-shim.py shim.bin xun.dtb ${uboot}/u-boot-nodtb.bin payload
