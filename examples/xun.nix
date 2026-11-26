@@ -1,4 +1,4 @@
-{ config, modulesPath, pkgs, ... }:
+{ pkgs, ... }:
 {
   nixpkgs.hostPlatform = "aarch64-linux";
   networking.hostName = "xun";
@@ -9,21 +9,6 @@
     fsType = "ext4";
     autoResize = true;
   };
-
-  system.build.xunRootImage = pkgs.callPackage "${modulesPath}/../lib/make-disk-image.nix" {
-    inherit config pkgs;
-    partitionTableType = "none";
-    label = "NIXOS_XUN";
-    baseName = "userdata";
-    copyChannel = false;
-  };
-
-  system.build.xunSparseRootImage = pkgs.runCommand "xun-userdata-sparse" {
-    nativeBuildInputs = [ pkgs.android-tools ];
-  } ''
-    mkdir -p "$out"
-    img2simg ${config.system.build.xunRootImage}/userdata.img "$out/userdata.img"
-  '';
 
   # Add your key before first boot to log in over the ECM link.
   # users.users.root.openssh.authorizedKeys.keys = [ "ssh-ed25519 ..." ];

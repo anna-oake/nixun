@@ -61,8 +61,10 @@ key before building if you want to use that link.
 2. Build the initial root filesystem and the U-Boot image from the same
    configuration, using an aarch64 Linux builder with KVM. The nixpkgs image
    builder runs `nixos-install` and installs the extlinux menu in a build VM.
-   The sparse root image is ready to flash. The raw ext4 image is available
-   separately as `system.build.xunRootImage`.
+   The module exposes `system.build.xunSparseRootImage` for the configured
+   host. It produces a flash-ready `userdata.img` with an ext4 filesystem
+   labeled `NIXOS_XUN`. For a custom host, configure your root filesystem to
+   mount that label, as in the example.
 
    ```sh
    nix build 'path:.#nixosConfigurations.xun.config.system.build.xunSparseRootImage' -o result-root
