@@ -1,0 +1,31 @@
+--- a/start.S
++++ b/start.S
+@@ -15,7 +15,7 @@
+  *   0x200000 the kernel Image (initramfs built in)
+  *
+  * ABL enters at EL1 with the MMU and D-cache off and x0 = its DTB, which we
+- * drop. ABL loads the image low in RAM (base 0x40000000), where the kernel
++ * pass to U-Boot separately from our DTB. ABL loads the image low in RAM (base 0x40000000), where the kernel
+  * with its BSS would run into the hypervisor and the other carveouts from
+  * 0x45700000 up, so the kernel is copied to KERNEL_DEST, at the start of the
+  * free 1 GB bank (KERNEL_ALT if ABL happened to put us there). Then x0 = our
+@@ -84,6 +84,7 @@
+ 
+ 	.text
+ start:
++	mov	x29, x0			/* original ABL DTB */
+ 	msr	daifset, #0xf
+ 	adr	x20, _head		/* where ABL put us */
+ 	mrs	x27, sctlr_el1
+@@ -196,8 +197,9 @@
+ 	bl	bar
+ 
+ 	mov	x0, x25			/* our DTB */
+-	mov	x1, xzr
+-	mov	x2, xzr
++	mov	x1, x29			/* original ABL DTB */
++	movz	x2, #0x5558		/* "XUN" handoff tag */
++	movk	x2, #0x004e, lsl #16
+ 	mov	x3, xzr
+ 	br	x27
+ 
