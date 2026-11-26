@@ -26,6 +26,10 @@ pkgs.buildLinux {
   pname = "linux-xun";
   kernelPatches = socPatches ++ [
     {
+      name = "xun-display-clock-halt";
+      patch = ./display-clock-halt.patch;
+    }
+    {
       name = "xun-board-files";
       patch = pkgs.callPackage ./board-files.patch.nix { inherit src xun tapas; };
     }

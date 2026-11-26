@@ -23,6 +23,9 @@ runCommand "xun-uboot-android-image" {
   chmod u+w xun.dtb
   mmc=$(fdtget -t s xun.dtb /__symbols__ sdhc_1)
   fdtput -t s xun.dtb /aliases mmc0 "$mmc"
+  # The U-Boot Qualcomm SDHCI driver lacks the DLL tuning and enhanced strobe
+  # support needed for these modes. Keep them in Linux's separate DTB.
+  fdtput -d xun.dtb "$mmc" mmc-hs200-1_8v mmc-hs400-1_8v mmc-hs400-enhanced-strobe
   fb=$(fdtget -t s xun.dtb /__symbols__ framebuffer0)
   fdtput -t i xun.dtb "$fb" rot 2
 

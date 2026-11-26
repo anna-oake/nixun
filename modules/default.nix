@@ -49,6 +49,7 @@ in
       loader.grub.enable = lib.mkDefault false;
       initrd = {
         includeDefaultModules = lib.mkDefault false;
+        systemd.tpm2.enable = lib.mkDefault false;
         extraFirmwarePaths = firmware.initrdFirmwarePaths ++ [
           "qcom/sm4250/SM6225-Xun-tplg.bin"
         ];
