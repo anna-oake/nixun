@@ -18,6 +18,13 @@
     copyChannel = false;
   };
 
+  system.build.xunSparseRootImage = pkgs.runCommand "xun-userdata-sparse" {
+    nativeBuildInputs = [ pkgs.android-tools ];
+  } ''
+    mkdir -p "$out"
+    img2simg ${config.system.build.xunRootImage}/userdata.img "$out/userdata.img"
+  '';
+
   # Add your key before first boot to log in over the ECM link.
   # users.users.root.openssh.authorizedKeys.keys = [ "ssh-ed25519 ..." ];
   services.openssh = {

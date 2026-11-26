@@ -1,0 +1,15 @@
+Poll the branch's own status register when enabling the critical display
+sleep and XO clocks. Without halt_reg, the branch ops poll offset zero.
+
+--- a/drivers/clk/qcom/dispcc-sm6375.c
++++ b/drivers/clk/qcom/dispcc-sm6375.c
+@@ -479,3 +479,4 @@
+ static struct clk_branch disp_cc_sleep_clk = {
++	.halt_reg = 0x5004,
+ 	.halt_check = BRANCH_HALT,
+ 	.clkr = {
+@@ -491,3 +492,4 @@
+ static struct clk_branch disp_cc_xo_clk = {
++	.halt_reg = 0x5008,
+ 	.halt_check = BRANCH_HALT,
+ 	.clkr = {

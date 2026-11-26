@@ -51,7 +51,6 @@ The module adds the AudioReach topology and the wireless regulatory database.
 
 ## Install to internal storage
 
-This fresh NixOS installation is untested on the tablet.
 [The example host](examples/xun.nix) boots from an ext4 filesystem on internal
 `userdata`. It offers USB Ethernet for the initial login. Add your SSH public
 key before building if you want to use that link.
@@ -62,9 +61,11 @@ key before building if you want to use that link.
 2. Build the initial root filesystem and the U-Boot image from the same
    configuration, using an aarch64 Linux builder with KVM. The nixpkgs image
    builder runs `nixos-install` and installs the extlinux menu in a build VM.
+   The sparse root image is ready to flash. The raw ext4 image is available
+   separately as `system.build.xunRootImage`.
 
    ```sh
-   nix build 'path:.#nixosConfigurations.xun.config.system.build.xunRootImage' -o result-root
+   nix build 'path:.#nixosConfigurations.xun.config.system.build.xunSparseRootImage' -o result-root
    nix build 'path:.#nixosConfigurations.xun.config.system.build.xunBootImage' -o result-boot
    ```
 
