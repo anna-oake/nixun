@@ -1,8 +1,15 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, modulesPath, pkgs, ... }:
 
 let
   cfg = config.hardware.redmi-pad-se;
   dt = config.hardware.deviceTree;
+  rootImage = pkgs.callPackage "${modulesPath}/../lib/make-disk-image.nix" {
+    inherit config pkgs;
+    partitionTableType = "none";
+    label = "NIXOS_XUN";
+    baseName = "userdata";
+    copyChannel = false;
+  };
   inherit (pkgs.callPackage ../pkgs/sources.nix { }) tapas;
   macBytes = mac: lib.splitString ":" mac;
   wifiBytes = lib.concatStringsSep " " (macBytes cfg.wifiMac);
@@ -42,5 +49,12 @@ in
       uboot = pkgs.callPackage ../pkgs/uboot { };
       deviceTree = "${dt.dtbSource}/${dt.name}";
     };
+
+    system.build.xunSparseRootImage = pkgs.runCommand "xun-userdata-sparse" {
+      nativeBuildInputs = [ pkgs.android-tools ];
+    } ''
+      mkdir -p "$out"
+      img2simg ${rootImage}/userdata.img "$out/userdata.img"
+    '';
   };
 }
