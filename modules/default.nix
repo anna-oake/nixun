@@ -27,8 +27,8 @@ in
         "m84-36-02-0a"
         "m84-42-03-0c"
       ]);
-      default = null;
-      description = "Override the panel variant selected by the board device tree.";
+      default = "m84-36-02-0a";
+      description = "Panel variant to use. Set to null to use the board device tree's panel.";
     };
     wifiMac = lib.mkOption {
       type = macType;

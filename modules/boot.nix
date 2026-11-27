@@ -20,38 +20,47 @@ in
     boot = {
       loader.generic-extlinux-compatible.enable = true;
       kernelParams =
-        if cfg.useFirmwareFramebuffer then
-          [
-            "regulator_ignore_unused"
-            "fbcon=rotate:2"
-          ]
-        else
-          [ "video=DSI-1:panel_orientation=upside_down" ];
+        # Keep firmware-enabled regulator supplies on during boot.
+        [ "regulator_ignore_unused" ]
+        ++ (
+          if cfg.useFirmwareFramebuffer then
+            [ "fbcon=rotate:2" ]
+          else
+            [ "video=DSI-1:panel_orientation=upside_down" ]
+        );
     };
 
     hardware.deviceTree = {
       enable = true;
       name = "qcom/sm6225-xiaomi-xun.dtb";
       filter = "sm6225-xiaomi-xun.dtb";
-      overlays = (lib.optional cfg.useFirmwareFramebuffer {
-        name = "xun-firmware-display";
-        dtsText = ''
-          /dts-v1/;
-          /plugin/;
+      overlays = [
+        {
+          name = if cfg.useFirmwareFramebuffer then "xun-firmware-display" else "xun-native-display";
+          dtsText = ''
+            /dts-v1/;
+            /plugin/;
 
-          / {
-            compatible = "xiaomi,xun";
-          };
+            / {
+              compatible = "xiaomi,xun";
+            };
 
-          &mdss {
-            status = "disabled";
-          };
+            ${if cfg.useFirmwareFramebuffer then ''
+              &mdss {
+                status = "disabled";
+              };
 
-          &dispcc {
-            status = "disabled";
-          };
-        '';
-      }) ++ (lib.optional (cfg.panelVariant != null) {
+              &dispcc {
+                status = "disabled";
+              };
+            '' else ''
+              &framebuffer0 {
+                status = "disabled";
+              };
+            ''}
+          '';
+        }
+      ] ++ (lib.optional (cfg.panelVariant != null) {
         name = "xun-panel-variant";
         dtsText = ''
           /dts-v1/;

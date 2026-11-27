@@ -35,8 +35,9 @@ The module configures the board kernel, per-generation device tree, early firmwa
 
 Nixun enables native display modesetting by default. Set
 `hardware.redmi-pad-se.panelVariant` to select the installed panel if it
-differs from the board device tree's M84 35 03 0B default. The option accepts
-`m84-35-03-0b`, `m84-36-02-0a`, and `m84-42-03-0c`. Set
+differs from the M84 36 02 0A default. The option accepts
+`m84-35-03-0b`, `m84-36-02-0a`, `m84-42-03-0c`, and `null` (use the
+panel selected by the board device tree). Set
 `hardware.redmi-pad-se.useFirmwareFramebuffer = true` for a recovery console
 if native modesetting gives corrupt or blank output. This mode keeps the
 firmware display setup and rotates the text console 180°.
