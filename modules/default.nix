@@ -20,6 +20,16 @@ in
 
   options.hardware.redmi-pad-se = {
     enable = lib.mkEnableOption "hardware support for the 11-inch Redmi Pad SE (xun)";
+    useFirmwareFramebuffer = lib.mkEnableOption "the firmware framebuffer in place of native display modesetting";
+    panelVariant = lib.mkOption {
+      type = lib.types.nullOr (lib.types.enum [
+        "m84-35-03-0b"
+        "m84-36-02-0a"
+        "m84-42-03-0c"
+      ]);
+      default = null;
+      description = "Override the panel variant selected by the board device tree.";
+    };
     wifiMac = lib.mkOption {
       type = macType;
       default = defaultMac "wifi";
@@ -44,7 +54,6 @@ in
         "pd_ignore_unused"
         "fw_devlink=off"
         "deferred_probe_timeout=120"
-        "video=DSI-1:panel_orientation=upside_down"
       ];
       loader.grub.enable = lib.mkDefault false;
       initrd = {
