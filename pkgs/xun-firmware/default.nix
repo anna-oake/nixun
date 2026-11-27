@@ -61,6 +61,7 @@ in
 stdenvNoCC.mkDerivation {
   pname = "xun-firmware";
   inherit version;
+  outputs = [ "out" "sensors" ];
 
   nativeBuildInputs = [
     payload-dumper-go
@@ -87,6 +88,8 @@ stdenvNoCC.mkDerivation {
     for partition in odm vendor; do
       fsck.erofs --extract="extracted/$partition" --path=/firmware --no-preserve "partitions/$partition.img"
     done
+    mkdir extracted/sensors
+    fsck.erofs --extract=extracted/sensors --path=/etc/sensors --no-preserve partitions/vendor.img
 
     runHook postUnpack
   '';
@@ -106,6 +109,10 @@ stdenvNoCC.mkDerivation {
     install -Dm644 extracted/odm/novatek_ts_fw_tianma.bin "$fw/novatek/nt36532-xun.bin"
     install -m644 extracted/bluetooth/image/cmbtfw13.tlv "$fw/qca/crbtfw13.tlv"
     install -m644 extracted/bluetooth/image/cmnv13.bin "$fw/qca/crnv13.bin"
+
+    mkdir -p "$sensors"
+    cp -r extracted/sensors/config "$sensors/"
+    install -m644 extracted/sensors/sns_reg_config "$sensors/sns_reg.conf"
 
     runHook postInstall
   '';

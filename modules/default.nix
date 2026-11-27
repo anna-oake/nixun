@@ -19,6 +19,7 @@ in
   imports = [
     ./boot.nix
     ./rtc.nix
+    (import ./sensors.nix { stockSensors = firmware.sensors; })
   ];
 
   options.hardware.redmi-pad-se = {
