@@ -31,7 +31,11 @@ nixun.inputs.nixpkgs.follows = "nixpkgs";
 
 Use a unique hostname per tablet if you omit the factory addresses, since the module derives locally administered addresses from it.
 
-The module configures the board kernel, per-generation device tree, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. It defaults to USB peripheral mode and supports FT8203 touch hardware.
+The module configures the board kernel, per-generation device tree, early firmware, ALSA UCM profile, and Qualcomm DSP services for Wi-Fi. It enables Mesa graphics and Bluetooth by default. The upstream port still lacks working cameras, accelerometer and ambient-light sensors, and USB Power Delivery. It defaults to USB peripheral mode.
+
+Touch defaults to the FocalTech FT8203 controller. Set
+`hardware.redmi-pad-se.touchscreenVariant = "novatek-nt36532";` on tablets
+with a Novatek NT36532. Select the display panel and touch controller independently.
 
 Nixun enables native display modesetting by default. Set
 `hardware.redmi-pad-se.panelVariant` to select the installed panel if it
@@ -53,7 +57,7 @@ manifest.
 [Official Xiaomi archive](https://cdnorg.d.miui.com/OS2.0.207.0.VMUEUXM/xun_eea_global-ota_full-OS2.0.207.0.VMUEUXM-user-15.0-6b1513122d.zip)
 
 The package includes the modem and ADSP images, Wi-Fi board data,
-Bluetooth firmware, both FT8203 touch firmwares, and the stock Adreno
+Bluetooth firmware, FT8203 and NT36532 touch firmware, and the stock Adreno
 firmware. The WCN3990 Wi-Fi driver also uses `board-2.bin` and `firmware-5.bin`
 from Linux firmware. The package fetches just those files and their notices.
 The module adds the AudioReach topology and the wireless regulatory database.

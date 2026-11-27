@@ -1,0 +1,80 @@
+--- a/sound/soc/codecs/wcd937x.c
++++ b/sound/soc/codecs/wcd937x.c
+@@ -10,6 +10,7 @@
+ #include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <linux/pm_runtime.h>
++#include <linux/pm_runtime.h>
+ #include <linux/regmap.h>
+ #include <linux/regulator/consumer.h>
+ #include <linux/slab.h>
+@@ -2708,11 +2709,34 @@
+ 	default:
+ 		break;
+ 	}
++
++	return 0;
++}
++
++static int wcd937x_codec_startup(struct snd_pcm_substream *substream,
++				struct snd_soc_dai *dai)
++{
++	struct wcd937x_priv *wcd937x = snd_soc_component_get_drvdata(dai->component);
++
++	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
++		/* The RX SoundWire slave must be awake for the ADC to deliver data. */
++		return pm_runtime_resume_and_get(wcd937x->rxdev);
+ 
+ 	return 0;
+ }
+ 
++static void wcd937x_codec_shutdown(struct snd_pcm_substream *substream,
++				  struct snd_soc_dai *dai)
++{
++	struct wcd937x_priv *wcd937x = snd_soc_component_get_drvdata(dai->component);
++
++	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
++		pm_runtime_put_autosuspend(wcd937x->rxdev);
++}
++
+ static const struct snd_soc_dai_ops wcd937x_sdw_dai_ops = {
++	.startup = wcd937x_codec_startup,
++	.shutdown = wcd937x_codec_shutdown,
+ 	.hw_params = wcd937x_codec_hw_params,
+ 	.hw_free = wcd937x_codec_free,
+ 	.set_stream = wcd937x_codec_set_sdw_stream,
+--- a/arch/arm64/boot/dts/qcom/sm6225-xiaomi-xun.dts
++++ b/arch/arm64/boot/dts/qcom/sm6225-xiaomi-xun.dts
+@@ -715,12 +715,11 @@
+ 				"VA DMIC2", "VA MIC BIAS3",
+ 				"VA DMIC3", "VA MIC BIAS3",
+ 
+-				"VA SWR_MIC0", "ADC1_OUTPUT",
+-				"VA SWR_MIC4", "ADC2_OUTPUT",
+-				"VA SWR_MIC5", "ADC3_OUTPUT",
++				"VA SWR_MIC4", "ADC1_OUTPUT",
++				"VA SWR_MIC5", "ADC2_OUTPUT",
+ 
+-				"TX SWR_INPUT0", "ADC1_OUTPUT",
+-				"TX SWR_INPUT4", "ADC2_OUTPUT";
++				"TX SWR_INPUT4", "ADC1_OUTPUT",
++				"TX SWR_INPUT5", "ADC2_OUTPUT";
+ 
+ 
+ 		/* MultiMedia1-3 (hw:0,0-2) come from the topology */
+@@ -906,12 +905,12 @@
+ 			reg = <0 3>;
+ 
+ 			/*
+-			 * WCD9370 TX Port 1 (ADC1)               <=> SWR Port 1
+-			 * WCD9370 TX Port 2 (ADC2, 3)            <=> SWR Port 1
++			 * WCD9370 TX Port 1 (ADC1)               <=> SWR Port 2
++			 * WCD9370 TX Port 2 (ADC2, 3)            <=> SWR Port 2
+ 			 * WCD9370 TX Port 3 (DMIC0,1,2,3 & MBHC) <=> SWR Port 2
+ 			 * WCD9370 TX Port 4 (DMIC4,5,6,7)        <=> SWR Port 3
+ 			 */
+-			qcom,tx-port-mapping = <1 1 2 3>;
++			qcom,tx-port-mapping = <2 2 2 3>;
+ 
+ 			/*
+ 			 * Static channel mapping between slave and master tx

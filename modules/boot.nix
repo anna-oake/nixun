@@ -3,6 +3,13 @@
 let
   cfg = config.hardware.redmi-pad-se;
   dt = config.hardware.deviceTree;
+  xunLinuxDtbs = pkgs.runCommand "xun-linux-dtbs" { nativeBuildInputs = [ pkgs.dtc ]; } ''
+    install -Dm644 "${dt.kernelPackage}/dtbs/${dt.name}" "$out/${dt.name}"
+    rtc=$(fdtget -t s "$out/${dt.name}" /__symbols__ pm6125_rtc)
+    # The PMIC arbiter grants Linux read access to the RTC registers.
+    fdtput -d "$out/${dt.name}" "$rtc" allow-set-time
+    fdtput -r "$out/${dt.name}" /vibrator
+  '';
   rootImage = pkgs.callPackage "${modulesPath}/../lib/make-disk-image.nix" {
     inherit config pkgs;
     partitionTableType = "none";
@@ -34,6 +41,7 @@ in
       enable = true;
       name = "qcom/sm6225-xiaomi-xun.dtb";
       filter = "sm6225-xiaomi-xun.dtb";
+      dtbSource = lib.mkDefault xunLinuxDtbs;
       overlays = [
         {
           name = if cfg.useFirmwareFramebuffer then "xun-firmware-display" else "xun-native-display";
@@ -72,6 +80,22 @@ in
 
           &panel {
             compatible = "xiaomi,${cfg.panelVariant}";
+          };
+        '';
+      }) ++ (lib.optional (cfg.touchscreenVariant == "novatek-nt36532") {
+        name = "xun-novatek-touchscreen";
+        dtsText = ''
+          /dts-v1/;
+          /plugin/;
+
+          / {
+            compatible = "xiaomi,xun";
+          };
+
+          &{/soc@0/geniqup@4ac0000/spi@4a80000/touchscreen@0} {
+            compatible = "novatek,nt36532-xun";
+            firmware-name = "novatek/nt36532-xun.bin";
+            interrupts = <80 1>; /* IRQ_TYPE_EDGE_RISING */
           };
         '';
       }) ++ [

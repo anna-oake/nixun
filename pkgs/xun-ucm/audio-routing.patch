@@ -1,0 +1,33 @@
+--- a/Qualcomm/sm6225/xun/HiFi.conf
++++ b/Qualcomm/sm6225/xun/HiFi.conf
+@@ -5 +5,2 @@
+-# Speaker: RX INT2 -> WCD AUX -> aw87xxx amplifier
++# Speakers in landscape with the front camera at the top:
++# left: RX INT0 -> WCD EAR, right: RX INT2 -> WCD AUX.
+@@ -36 +37,6 @@
+-		cset "name='RX INT2_1 MIX1 INP0' RX0"
++		cset "name='RX_MACRO RX1 MUX' AIF1_PB"
++		cset "name='RX INT0_1 MIX1 INP1' RX0"
++		cset "name='RX INT2_1 MIX1 INP0' RX1"
++		cset "name='RX INT0 DEM MUX' CLSH_DSM_OUT"
++		cset "name='RX_EAR Mode Switch' 1"
++		cset "name='RX_RX0 Digital Volume' 84"
+@@ -37,0 +44,2 @@
++		cset "name='RDAC3_MUX' RX1"
++		cset "name='HPHL Switch' 1"
+@@ -38,0 +47 @@
++		cset "name='EAR_RDAC Switch' 1"
+@@ -43,0 +53 @@
++		cset "name='EAR_RDAC Switch' 0"
+@@ -44,0 +55,3 @@
++		cset "name='HPHL Switch' 0"
++		cset "name='RX_EAR Mode Switch' 0"
++		cset "name='RX INT0 DEM MUX' NORMAL_DSM_OUT"
+@@ -45,0 +59,2 @@
++		cset "name='RX INT0_1 MIX1 INP1' ZERO"
++		cset "name='RX_MACRO RX1 MUX' ZERO"
+@@ -108 +123 @@
+-		cset "name='TX SMIC MUX0' SWR_MIC0"
++		cset "name='TX SMIC MUX0' SWR_MIC4"
+@@ -110,0 +126 @@
++		cset "name='ADC1 Volume' 8"

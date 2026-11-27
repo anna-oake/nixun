@@ -30,6 +30,11 @@ in
       default = "m84-36-02-0a";
       description = "Panel variant to use. Set to null to use the board device tree's panel.";
     };
+    touchscreenVariant = lib.mkOption {
+      type = lib.types.enum [ "focaltech-ft8203" "novatek-nt36532" ];
+      default = "focaltech-ft8203";
+      description = "Touchscreen controller fitted to the tablet.";
+    };
     wifiMac = lib.mkOption {
       type = macType;
       default = defaultMac "wifi";
@@ -47,6 +52,9 @@ in
   config = lib.mkIf cfg.enable {
     boot = {
       kernelPackages = pkgs.linuxPackagesFor kernel;
+      extraModulePackages = lib.optional (cfg.touchscreenVariant == "novatek-nt36532") (
+        config.boot.kernelPackages.callPackage ../pkgs/nt36532 { }
+      );
       kernelParams = [
         "console=tty0"
         "consoleblank=0"
@@ -76,6 +84,8 @@ in
       "${pkgs.alsa-ucm-conf.overrideAttrs (old: {
         postPatch = (old.postPatch or "") + ''
           cp -r ${xun}/build/ucm2/. ucm2/
+          chmod u+w ucm2/Qualcomm/sm6225/xun
+          patch -d ucm2 -p1 < ${../pkgs/xun-ucm/audio-routing.patch}
         '';
       })}/share/alsa/ucm2";
 

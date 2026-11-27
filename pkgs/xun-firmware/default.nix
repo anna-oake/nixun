@@ -103,6 +103,7 @@ stdenvNoCC.mkDerivation {
     install -m644 extracted/modem/image/{adsp.*,modem.*,wlanmdsp.mbn,bdwlan*,bd84*} "$radio/"
     install -m644 extracted/vendor/{a610_zap.mdt,a610_zap.b0[0-2],a630_sqe.fw} "$fw/qcom/"
     install -m644 extracted/odm/focaltech_ts_fw_{boe,huaxing}_ft8203.bin "$fw/"
+    install -Dm644 extracted/odm/novatek_ts_fw_tianma.bin "$fw/novatek/nt36532-xun.bin"
     install -m644 extracted/bluetooth/image/cmbtfw13.tlv "$fw/qca/crbtfw13.tlv"
     install -m644 extracted/bluetooth/image/cmnv13.bin "$fw/qca/crnv13.bin"
 
@@ -119,6 +120,7 @@ stdenvNoCC.mkDerivation {
       "qcom/a610_zap.b02"
       "focaltech_ts_fw_huaxing_ft8203.bin"
       "focaltech_ts_fw_boe_ft8203.bin"
+      "novatek/nt36532-xun.bin"
       "qca/crbtfw13.tlv"
       "qca/crnv13.bin"
       "${dspDir}/adsp.mdt"

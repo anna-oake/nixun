@@ -1,0 +1,209 @@
+--- a/sound/soc/codecs/fs1815.c
++++ b/sound/soc/codecs/fs1815.c
+@@ -3,10 +3,10 @@
+  * Foursemi FS1815 smart speaker amplifier (I2C).
+  *
+  * The Redmi Pad SE has four of them: two on I2C1 behind a shared reset line
+- * and two more on I2C2, driving the four speakers.  Linux does not control
+- * them through ASoC here; the driver brings each amplifier up with the
+- * register preset of the board (fsm preset "M84/MI", scene "music") and
+- * leaves it running, so the WCD937x AUX output is always amplified.
++ * and two more on I2C2, driving the four speakers. The vendor board preset
++ * (M84/MI, music scene) configures each amplifier at probe. DAPM enables
++ * the power stage after the codec output is ready and turns it off first
++ * when the playback path powers down.
+  *
+  * Register access: one byte of address, a 16-bit big-endian value; read is
+  * an address write followed by two bytes.  The register tables below are the
+@@ -20,6 +20,7 @@
+ #include <linux/module.h>
+ #include <linux/of.h>
+ #include <linux/string.h>
++#include <sound/soc.h>
+ 
+ #define FS1815_REG_DEVID	0x01
+ #define FS1815_REG_REVID	0x02
+@@ -174,7 +175,7 @@
+ 	msleep(1);
+ }
+ 
+-static int fs1815_start(struct fs1815 *amp)
++static int fs1815_configure(struct fs1815 *amp)
+ {
+ 	struct i2c_client *client = amp->client;
+ 	struct fs1815_reg music[ARRAY_SIZE(fs1815_music)];
+@@ -209,17 +210,62 @@
+ 			return ret;
+ 	}
+ 
++	return 0;
++}
++
++static int fs1815_power_down(struct i2c_client *client)
++{
++	int ret, sysctrl_ret;
++
++	ret = fs1815_write(client, FS1815_REG_PWRCTRL, 0x0001);
++	sysctrl_ret = fs1815_write(client, FS1815_REG_SYSCTRL, 0x0000);
++
++	return ret ? ret : sysctrl_ret;
++}
++
++static int fs1815_dapm_event(struct snd_soc_dapm_widget *widget,
++			     struct snd_kcontrol *control, int event)
++{
++	struct snd_soc_component *component = snd_soc_dapm_to_component(widget->dapm);
++	struct fs1815 *amp = snd_soc_component_get_drvdata(component);
++	struct i2c_client *client = amp->client;
++	int ret;
++
++	if (event == SND_SOC_DAPM_PRE_PMD)
++		return fs1815_power_down(client);
++
+ 	ret = fs1815_write(client, FS1815_REG_SYSCTRL, 0x008f);
+-	if (ret)
++	if (!ret)
++		ret = fs1815_write(client, FS1815_REG_PWRCTRL, 0x0000);
++	if (ret) {
++		fs1815_power_down(client);
+ 		return ret;
+-	ret = fs1815_write(client, FS1815_REG_PWRCTRL, 0x0000);
+-	if (ret)
+-		return ret;
++	}
+ 
+ 	msleep(10);
+ 	return 0;
+ }
+ 
++static const struct snd_soc_dapm_widget fs1815_widgets[] = {
++	SND_SOC_DAPM_INPUT("IN"),
++	SND_SOC_DAPM_OUT_DRV_E("Amp", SND_SOC_NOPM, 0, 0, NULL, 0,
++			      fs1815_dapm_event,
++			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
++	SND_SOC_DAPM_OUTPUT("OUT"),
++};
++
++static const struct snd_soc_dapm_route fs1815_routes[] = {
++	{ "Amp", NULL, "IN" },
++	{ "OUT", NULL, "Amp" },
++};
++
++static const struct snd_soc_component_driver fs1815_component = {
++	.dapm_widgets = fs1815_widgets,
++	.num_dapm_widgets = ARRAY_SIZE(fs1815_widgets),
++	.dapm_routes = fs1815_routes,
++	.num_dapm_routes = ARRAY_SIZE(fs1815_routes),
++};
++
+ static int fs1815_probe(struct i2c_client *client)
+ {
+ 	struct fs1815 *amp;
+@@ -266,23 +312,21 @@
+ 	/* 0x34/0x36 are one channel, 0x35/0x37 the other (preset tables). */
+ 	amp->position = (dev_addr == 0x35 || dev_addr == 0x37);
+ 
+-	ret = fs1815_start(amp);
++	ret = fs1815_configure(amp);
+ 	if (ret)
+-		return dev_err_probe(&client->dev, ret, "start failed\n");
++		return dev_err_probe(&client->dev, ret, "configuration failed\n");
+ 
+-	dev_info(&client->dev, "FS1815 at 0x%02x (preset 0x%02x), power on\n",
+-		 client->addr, dev_addr);
+-	return 0;
++	ret = fs1815_power_down(client);
++	if (ret)
++		return dev_err_probe(&client->dev, ret, "power down failed\n");
++
++	return devm_snd_soc_register_component(&client->dev, &fs1815_component,
++					       NULL, 0);
+ }
+ 
+ static void fs1815_remove(struct i2c_client *client)
+ {
+-	struct fs1815 *amp = i2c_get_clientdata(client);
+-
+-	fs1815_write(client, FS1815_REG_PWRCTRL, 0x0001);
+-	fs1815_write(client, FS1815_REG_SYSCTRL, 0x0000);
+-	if (amp->reset)
+-		gpiod_set_value_cansleep(amp->reset, 1);
++	fs1815_power_down(client);
+ }
+ 
+ static const struct of_device_id fs1815_of_match[] = {
+@@ -305,6 +349,7 @@
+ 	},
+ 	.probe = fs1815_probe,
+ 	.remove = fs1815_remove,
++	.shutdown = fs1815_remove,
+ 	.id_table = fs1815_id,
+ };
+ module_i2c_driver(fs1815_driver);
+--- a/arch/arm64/boot/dts/qcom/sm6225-xiaomi-xun.dts
++++ b/arch/arm64/boot/dts/qcom/sm6225-xiaomi-xun.dts
+@@ -369,17 +369,19 @@
+ 	};
+ 
+ 	/* Second speaker pair; the reset line is shared with its sibling */
+-	speaker@34 {
++	speaker_second_left: speaker@34 {
+ 		compatible = "foursemi,fs1815";
+ 		reg = <0x34>;
+ 		foursemi,dev-addr = <0x36>;
++		sound-name-prefix = "Left 2";
+ 		reset-gpios = <&tlmm 70 GPIO_ACTIVE_LOW>;
+ 	};
+ 
+-	speaker@35 {
++	speaker_second_right: speaker@35 {
+ 		compatible = "foursemi,fs1815";
+ 		reg = <0x35>;
+ 		foursemi,dev-addr = <0x37>;
++		sound-name-prefix = "Right 2";
+ 		reset-gpios = <&tlmm 70 GPIO_ACTIVE_LOW>;
+ 	};
+ };
+@@ -391,17 +393,19 @@
+ 	assigned-clocks = <&gcc GCC_QUPV3_WRAP0_S1_CLK>;
+ 	assigned-clock-rates = <19200000>;
+ 
+-	speaker@34 {
++	speaker_first_left: speaker@34 {
+ 		compatible = "foursemi,fs1815";
+ 		reg = <0x34>;
+ 		foursemi,dev-addr = <0x34>;
++		sound-name-prefix = "Left 1";
+ 		reset-gpios = <&tlmm 106 GPIO_ACTIVE_LOW>;
+ 	};
+ 
+-	speaker@35 {
++	speaker_first_right: speaker@35 {
+ 		compatible = "foursemi,fs1815";
+ 		reg = <0x35>;
+ 		foursemi,dev-addr = <0x35>;
++		sound-name-prefix = "Right 1";
+ 		reset-gpios = <&tlmm 106 GPIO_ACTIVE_LOW>;
+ 	};
+ 
+@@ -690,6 +694,8 @@
+ 	sound {
+ 		compatible = "qcom,qrb4210-rb2-sndcard";
+ 		model = "SM6225-Xun";
++		aux-devs = <&speaker_first_left>, <&speaker_first_right>,
++			   <&speaker_second_left>, <&speaker_second_right>;
+ 		audio-routing =
+ 				"AMIC1", "MIC BIAS1",
+ 				"AMIC2", "MIC BIAS2",
+@@ -699,6 +705,11 @@
+ 				"IN2_HPHR", "HPHR_OUT",
+ 				"IN3_AUX", "AUX_OUT",
+ 
++				"Left 1 IN", "EAR",
++				"Left 2 IN", "EAR",
++				"Right 1 IN", "AUX",
++				"Right 2 IN", "AUX",
++
+ 				"VA DMIC0", "VA MIC BIAS1",
+ 				"VA DMIC1", "VA MIC BIAS1",
+ 				"VA DMIC2", "VA MIC BIAS3",

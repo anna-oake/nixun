@@ -90,8 +90,8 @@
 +	depends on I2C
 +	help
 +	  Say Y here to enable the Foursemi FS1815 speaker amplifier of the
-+	  Redmi Pad SE. The driver initialises the amplifier from the board
-+	  preset and leaves it running behind the WCD937x AUX output.
++	  Redmi Pad SE. The driver loads the board preset and powers the
++	  amplifier through the ASoC playback path.
 +
 +
 --- a/sound/soc/codecs/Makefile

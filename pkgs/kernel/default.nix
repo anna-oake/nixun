@@ -38,6 +38,14 @@ pkgs.buildLinux {
       patch = ./panel-m84-36-backlight.patch;
     }
     {
+      name = "xun-fs1815-dapm";
+      patch = ./fs1815-dapm.patch;
+    }
+    {
+      name = "xun-wcd937x-capture-runtime-pm";
+      patch = ./wcd937x-capture-runtime-pm.patch;
+    }
+    {
       name = "xun-board-integration";
       patch = ./board-integration.patch;
     }
