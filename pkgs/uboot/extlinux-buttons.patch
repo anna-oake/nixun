@@ -1,48 +1,107 @@
 --- a/common/menu.c
 +++ b/common/menu.c
-@@ -183,6 +183,41 @@
+@@ -183,6 +183,100 @@
  	return -ENOENT;
  }
  
++#define PHONE_MENU_COLUMN 5
++#define PHONE_MENU_FIRST_ROW 8
++#define PHONE_MENU_ROWS 20
++
++static void menu_button_display(struct menu *m, int selected, int first)
++{
++	struct menu_item *item;
++	int index = 0;
++	int row = PHONE_MENU_FIRST_ROW;
++	int count = min(m->item_cnt, PHONE_MENU_ROWS);
++
++	list_for_each_entry(item, &m->items, list) {
++		if (index >= first + count)
++			break;
++		if (index >= first) {
++			printf(ANSI_CURSOR_POSITION ANSI_CLEAR_LINE,
++			       row++, PHONE_MENU_COLUMN);
++			if (index == selected)
++				puts(ANSI_COLOR_REVERSE "> ");
++			else
++				puts("  ");
++			menu_item_print(m, item, NULL);
++			puts(ANSI_COLOR_RESET);
++		}
++		index++;
++	}
++
++	printf(ANSI_CURSOR_POSITION ANSI_CLEAR_LINE,
++	       row + 1, PHONE_MENU_COLUMN);
++	printf("Generation %d of %d", selected + 1, m->item_cnt);
++}
++
 +/* Phone buttons provide up, down and enter, but no numeric input. */
 +static int menu_button_choice(struct menu *m, void **choice)
 +{
-+	struct menu_item *item = m->default_item;
-+	struct bootmenu_data menu = { .delay = m->timeout ?: -1, .count = 1 };
++	struct bootmenu_data menu = {
++		.delay = m->timeout ?: -1,
++		.count = PHONE_MENU_FIRST_ROW + min(m->item_cnt, PHONE_MENU_ROWS) - 2,
++	};
++	struct menu_item *item;
 +	struct cli_ch_state cch;
-+	enum bootmenu_key key;
++	int selected = 0, first = 0;
 +
-+	if (!item)
++	if (list_empty(&m->items))
++		return -ENOENT;
++
++	list_for_each_entry(item, &m->items, list) {
++		if (item == m->default_item)
++			break;
++		selected++;
++	}
++	if (selected == m->item_cnt) {
 +		item = list_first_entry(&m->items, struct menu_item, list);
++		selected = 0;
++	}
 +
 +	cli_ch_init(&cch);
-+	printf(ANSI_CLEAR_CONSOLE ANSI_CURSOR_POSITION, 1, 1);
-+	puts("Volume selects a generation. Power boots it.\n");
++	printf(ANSI_CLEAR_CONSOLE ANSI_CURSOR_POSITION, 4, PHONE_MENU_COLUMN);
++	puts("\e[1;36mNixOS boot menu" ANSI_COLOR_RESET);
++	printf(ANSI_CURSOR_POSITION, 6, PHONE_MENU_COLUMN);
++	puts("Volume: select     Power: boot");
 +	for (;;) {
-+		printf(ANSI_CURSOR_POSITION ANSI_CLEAR_LINE, 3, 1);
-+		menu_item_print(m, item, NULL);
++		enum bootmenu_key key;
++
++		if (selected < first)
++			first = selected;
++		else if (selected >= first + PHONE_MENU_ROWS)
++			first = selected - PHONE_MENU_ROWS + 1;
++		menu_button_display(m, selected, first);
++
 +		do {
 +			key = menu.delay > 0 ? bootmenu_autoboot_loop(&menu, &cch) :
 +					      bootmenu_loop(&menu, &cch);
-+		} while (key == BKEY_NONE);
++		} while (key == BKEY_NONE || key == BKEY_SHORTCUT);
 +
-+		if (key == BKEY_SELECT) {
++		if (key == BKEY_SELECT || key == BKEY_QUIT) {
++			printf(ANSI_CLEAR_CONSOLE ANSI_CURSOR_POSITION, 4,
++			       PHONE_MENU_COLUMN);
++			if (key == BKEY_QUIT)
++				return -EINTR;
 +			*choice = item->data;
 +			return 1;
 +		}
-+		if (key == BKEY_QUIT)
-+			return -EINTR;
-+		if (key == BKEY_UP && item->list.prev != &m->items)
++		if (key == BKEY_UP && item->list.prev != &m->items) {
 +			item = list_prev_entry(item, list);
-+		if (key == BKEY_DOWN && item->list.next != &m->items)
++			selected--;
++		}
++		if (key == BKEY_DOWN && item->list.next != &m->items) {
 +			item = list_next_entry(item, list);
++			selected++;
++		}
 +	}
 +}
 +
  /*
   * Displays the menu and asks the user to choose an item. *choice will point
   * to the private data of the item the user chooses. The user makes a choice
-@@ -287,6 +322,9 @@
+@@ -287,6 +381,9 @@
  
  	if (!m->prompt)
  		return menu_default_choice(m, choice);

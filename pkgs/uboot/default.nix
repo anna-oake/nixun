@@ -21,6 +21,8 @@ in
   extraConfig = ''
     CONFIG_CMD_SYSBOOT=y
     CONFIG_SYS_CBSIZE=2048
+    # CONFIG_VIDEO_FONT_8X16 is not set
+    CONFIG_VIDEO_FONT_16X32=y
     CONFIG_BOOTDELAY=-2
     # CONFIG_AUTOBOOT_MENU_SHOW is not set
     # CONFIG_BOOT_RETRY is not set

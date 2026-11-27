@@ -25,7 +25,14 @@ in
 {
   config = lib.mkIf cfg.enable {
     boot = {
+      loader.timeout = lib.mkDefault 1;
       loader.generic-extlinux-compatible.enable = true;
+      # XF86PowerOff is the XKB symbol for the tablet's power key.
+      plymouth.extraConfig = lib.mkIf config.boot.plymouth.enable ''
+        XkbExtraEscButton=0x1008ff2a
+      '';
+      # Plymouth needs the XKB rules in the initrd to read input events.
+      initrd.systemd.storePaths = lib.mkIf config.boot.plymouth.enable [ pkgs.xkeyboard-config ];
       kernelParams =
         # Keep firmware-enabled regulator supplies on during boot.
         [ "regulator_ignore_unused" ]
@@ -33,7 +40,7 @@ in
           if cfg.useFirmwareFramebuffer then
             [ "fbcon=rotate:2" ]
           else
-            [ "video=DSI-1:panel_orientation=upside_down" ]
+            [ "video=DSI-1:panel_orientation=left_side_up" ]
         );
     };
 
