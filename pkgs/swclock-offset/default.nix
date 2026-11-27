@@ -2,8 +2,6 @@
   lib,
   stdenvNoCC,
   fetchurl,
-  makeWrapper,
-  coreutils,
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
@@ -15,19 +13,12 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     hash = "sha256-d557/nD3UXGnJhFjgSsvxJ+1s7s9DLKhZmlhsZoedk8=";
   };
 
-  nativeBuildInputs = [ makeWrapper ];
   dontBuild = true;
   makeFlags = [
     "prefix=$(out)"
     "cachedir=/var/lib"
   ];
   installTargets = [ "bin" ];
-
-  postInstall = ''
-    for script in "$out/bin/"*; do
-      wrapProgram "$script" --prefix PATH : "${lib.makeBinPath [ coreutils ]}"
-    done
-  '';
 
   meta = {
     description = "Keep system time at an offset to a read-only RTC";
