@@ -16,7 +16,10 @@ let
     lib.concatStringsSep ":" ([ "02" ] ++ octets);
 in
 {
-  imports = [ ./boot.nix ];
+  imports = [
+    ./boot.nix
+    ./rtc.nix
+  ];
 
   options.hardware.redmi-pad-se = {
     enable = lib.mkEnableOption "hardware support for the 11-inch Redmi Pad SE (xun)";
